@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Animated,
   Image,
   ScrollView,
   StyleSheet,
@@ -62,6 +63,82 @@ export const IncidentRecorderScreen: React.FC<IncidentRecorderScreenProps> = ({
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [statusMessage, setStatusMessage] = useState<string>('');
   const [transcribedTicket, setTranscribedTicket] = useState<Ticket | null>(null);
+  const [elapsedSeconds, setElapsedSeconds] = useState<number>(0);
+
+  // Audio waveform equalizer animation (11 bars with staggered heights)
+  const waveAnims = useRef(Array.from({ length: 11 }, () => new Animated.Value(0.25))).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+
+  // Track recording elapsed time
+  useEffect(() => {
+    let interval: any = null;
+    if (isRecording) {
+      setElapsedSeconds(0);
+      interval = setInterval(() => {
+        setElapsedSeconds((prev) => prev + 1);
+      }, 1000);
+    } else {
+      setElapsedSeconds(0);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isRecording]);
+
+  // Audio equalizer & halo pulsing loop
+  useEffect(() => {
+    if (isRecording) {
+      const barAnimations = waveAnims.map((anim, i) => {
+        const minScale = 0.2 + (i % 3) * 0.08;
+        const maxScale = 0.65 + ((i * 7) % 5) * 0.08;
+        return Animated.loop(
+          Animated.sequence([
+            Animated.timing(anim, {
+              toValue: maxScale,
+              duration: 180 + (i * 35) % 200,
+              useNativeDriver: true,
+            }),
+            Animated.timing(anim, {
+              toValue: minScale,
+              duration: 180 + ((11 - i) * 35) % 200,
+              useNativeDriver: true,
+            }),
+          ])
+        );
+      });
+      barAnimations.forEach((a) => a.start());
+
+      const haloPulse = Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 1.08,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 1.0,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+        ])
+      );
+      haloPulse.start();
+
+      return () => {
+        barAnimations.forEach((a) => a.stop());
+        haloPulse.stop();
+      };
+    } else {
+      waveAnims.forEach((anim) => anim.setValue(0.25));
+      pulseAnim.setValue(1);
+    }
+  }, [isRecording]);
+
+  const formatTimer = (secs: number) => {
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    return `${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;
+  };
 
   const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
 
@@ -290,7 +367,7 @@ export const IncidentRecorderScreen: React.FC<IncidentRecorderScreenProps> = ({
     <View style={styles.container}>
       <StepIndicator currentStep={1} />
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Kiosk or Supervisor Proxy Mode Header */}
         {kioskSession && (
           <View style={styles.kioskHeaderRow}>
@@ -309,136 +386,144 @@ export const IncidentRecorderScreen: React.FC<IncidentRecorderScreenProps> = ({
 
         {/* Top bar */}
         <View style={styles.topBar}>
-          <TouchableOpacity onPress={onBack} style={styles.backButton}>
+          <TouchableOpacity onPress={onBack} style={styles.backButton} activeOpacity={0.7}>
             <Text style={styles.backButtonText}>‹ Back</Text>
           </TouchableOpacity>
-          <View style={styles.typeBadge}>
+          <View style={[styles.typeBadge, reportType === 'emergency' && styles.typeBadgeEmergency]}>
             <Text style={styles.typeBadgeText}>
               {reportType === 'emergency' ? 'CRITICAL EMERGENCY' : 'INCIDENT OBSERVATION'}
             </Text>
           </View>
         </View>
 
-        <Text style={styles.screenTitle}>
-          {reportType === 'emergency' ? 'Emergency Incident Notice' : 'Describe What Happened'}
-        </Text>
-        <Text style={styles.screenSubtitle}>
-          Voice-first reporting with automated steel plant domain transcription and noise suppression.
-        </Text>
+        {/* Screen Heading */}
+        <View style={styles.headingSection}>
+          <Text style={styles.screenTitle}>
+            {reportType === 'emergency' ? 'Emergency Incident Notice' : 'Describe What Happened'}
+          </Text>
+          <Text style={styles.screenSubtitle}>
+            Voice-first reporting with real-time acoustic plant noise suppression.
+          </Text>
+        </View>
 
-        {/* Zone Selection Chips */}
-        <Text style={styles.sectionLabel}>OBSERVED PLANT ZONE:</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.zoneScroll}>
-          {COMMON_ZONES.map((z) => {
-            const isRestricted = z.id in RESTRICTED_ZONES_MAP;
-            const isSelected = selectedZone === z.id;
-            return (
-              <TouchableOpacity
-                key={z.id}
-                style={[
-                  styles.zoneChip,
-                  isSelected && styles.zoneChipSelected,
-                  isRestricted && styles.zoneChipRestricted,
-                ]}
-                onPress={() => setSelectedZone(z.id)}
-              >
-                <Text style={[styles.zoneText, isSelected && styles.zoneTextSelected]}>
-                  {z.name} ({z.id})
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-
-        {/* Mode Switcher */}
-        <View style={styles.tabContainer}>
+        {/* Apple Segmented Control (Voice vs Text) */}
+        <View style={styles.segmentedControl}>
           <TouchableOpacity
-            style={[styles.tabButton, mode === 'voice' && styles.tabButtonActive]}
+            style={[styles.segmentTab, mode === 'voice' && styles.segmentTabActive]}
             onPress={() => setMode('voice')}
+            activeOpacity={0.8}
           >
-            <Text style={[styles.tabText, mode === 'voice' && styles.tabTextActive]}>
-              Voice Report (Primary)
+            <Text style={[styles.segmentText, mode === 'voice' && styles.segmentTextActive]}>
+              Voice Intake (Primary)
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.tabButton, mode === 'text' && styles.tabButtonActive]}
+            style={[styles.segmentTab, mode === 'text' && styles.segmentTabActive]}
             onPress={() => setMode('text')}
+            activeOpacity={0.8}
           >
-            <Text style={[styles.tabText, mode === 'text' && styles.tabTextActive]}>
+            <Text style={[styles.segmentText, mode === 'text' && styles.segmentTextActive]}>
               Type Text
             </Text>
           </TouchableOpacity>
         </View>
 
-        {/* Language Selection Chips */}
-        <Text style={styles.sectionLabel}>SPOKEN LANGUAGE PREFERENCE:</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.langScroll}>
-          {INTAKE_LANGUAGES.map((l) => (
-            <TouchableOpacity
-              key={l.code}
-              style={[styles.langChip, selectedLanguage === l.code && styles.langChipActive]}
-              onPress={() => setSelectedLanguage(l.code)}
-            >
-              <Text style={[styles.langText, selectedLanguage === l.code && styles.langTextActive]}>
-                {l.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-
-        {/* Regional Dialect Warning */}
-        {(selectedLanguage === 'bn' || selectedLanguage === 'or') && (
-          <View style={styles.dialectWarningBox}>
-            <Text style={styles.dialectWarningText}>{i18n.t('dialectNotice')}</Text>
-          </View>
-        )}
-
-        {/* Voice Mode (PPE / Glove Friendly Giant Trigger) */}
+        {/* VOICE MODE: Apple Acoustic Studio */}
         {mode === 'voice' && (
-          <View style={styles.voiceSection}>
-            <View style={[styles.micHalo, isRecording && styles.micHaloRecording]}>
-              <TouchableOpacity
-                style={[
-                  styles.micHeroButton,
-                  isRecording ? styles.micHeroRecording : styles.micHeroIdle,
-                ]}
-                onPress={isRecording ? stopRecordingAndTranscribe : startRecording}
-                disabled={isLoading}
-                activeOpacity={0.85}
-              >
-                <Image
-                  source={isRecording ? require('../../assets/stop.png') : require('../../assets/mic.png')}
-                  style={styles.micImage}
-                  resizeMode="contain"
-                />
-              </TouchableOpacity>
+          <View style={styles.studioCard}>
+            {/* Studio Header: Status / Live Stopwatch */}
+            <View style={styles.studioHeader}>
+              {isRecording ? (
+                <View style={styles.liveRecordingBadge}>
+                  <View style={styles.livePulseDot} />
+                  <Text style={styles.liveRecordingText}>LIVE RECORDING</Text>
+                </View>
+              ) : (
+                <View style={styles.idleReadyBadge}>
+                  <View style={styles.idleDot} />
+                  <Text style={styles.idleReadyText}>READY TO RECORD</Text>
+                </View>
+              )}
             </View>
 
-            <Text style={styles.micActionText}>
-              {isRecording ? 'Tap to Stop & Transcribe' : 'Tap to Speak'}
-            </Text>
-            <Text style={styles.micSubText}>
-              {isRecording ? 'Acoustic noise filter active...' : 'One-handed, glove-friendly trigger'}
-            </Text>
-
+            {/* Stopwatch Timer Display */}
             {isRecording && (
-              <View style={styles.recordingPulseBar}>
-                <View style={styles.redDot} />
-                <Text style={styles.recordingStatusText}>Recording in progress... Tap to finish</Text>
+              <View style={styles.timerRow}>
+                <Text style={styles.timerDigits}>{formatTimer(elapsedSeconds)}</Text>
               </View>
             )}
+
+            {/* Live Audio Equalizer Waveform */}
+            <View style={styles.waveformContainer}>
+              {waveAnims.map((anim, idx) => (
+                <Animated.View
+                  key={idx}
+                  style={[
+                    styles.waveformBar,
+                    {
+                      transform: [{ scaleY: anim }],
+                      backgroundColor: isRecording ? '#FFFFFF' : 'rgba(255, 255, 255, 0.3)',
+                      opacity: isRecording ? 1 : 0.45,
+                    },
+                  ]}
+                />
+              ))}
+            </View>
+
+            {/* Concentric Breathing Halo Hero */}
+            <View style={styles.micStageContainer}>
+              <Animated.View
+                style={[
+                  styles.micOuterHalo,
+                  isRecording && styles.micOuterHaloRecording,
+                  { transform: [{ scale: pulseAnim }] },
+                ]}
+              >
+                <View style={[styles.micInnerHalo, isRecording && styles.micInnerHaloRecording]}>
+                  <TouchableOpacity
+                    style={[
+                      styles.micHeroButton,
+                      isRecording ? styles.micHeroRecording : styles.micHeroIdle,
+                    ]}
+                    onPress={isRecording ? stopRecordingAndTranscribe : startRecording}
+                    disabled={isLoading}
+                    activeOpacity={0.85}
+                  >
+                    <Image
+                      source={
+                        isRecording
+                          ? require('../../assets/stop.png')
+                          : require('../../assets/mic.png')
+                      }
+                      style={styles.micImage}
+                      resizeMode="contain"
+                    />
+                  </TouchableOpacity>
+                </View>
+              </Animated.View>
+            </View>
+
+            {/* Studio Action Prompt */}
+            <Text style={styles.micActionText}>
+              {isRecording ? 'Tap to Stop & Transcribe' : 'Tap Microphone to Speak'}
+            </Text>
+            <Text style={styles.micSubText}>
+              {isRecording
+                ? 'Plant noise filter active • Whisper AI listening'
+                : 'One-handed trigger • Optimized for industrial PPE gloves'}
+            </Text>
           </View>
         )}
 
-        {/* Text Mode */}
+        {/* TEXT MODE */}
         {mode === 'text' && (
           <View style={styles.textSection}>
             <TextInput
               style={styles.textArea}
-              placeholder="e.g. Molten slag overflow near casthouse tuyere, LOTO applied at breaker panel..."
-              placeholderTextColor="#64748b"
+              placeholder="Describe the hazard or incident in detail (e.g. Molten slag overflow near casthouse tuyere, LOTO applied at breaker panel)..."
+              placeholderTextColor="rgba(235, 235, 245, 0.4)"
               multiline
-              numberOfLines={4}
+              numberOfLines={5}
               value={textInput}
               onChangeText={setTextInput}
               editable={!isLoading}
@@ -447,11 +532,76 @@ export const IncidentRecorderScreen: React.FC<IncidentRecorderScreenProps> = ({
               style={styles.submitTextButton}
               onPress={submitText}
               disabled={isLoading}
+              activeOpacity={0.85}
             >
               <Text style={styles.submitTextButtonText}>Submit Incident Notice ➔</Text>
             </TouchableOpacity>
           </View>
         )}
+
+        {/* Grouped Card 1: Observed Plant Zone */}
+        <View style={styles.configGroupCard}>
+          <View style={styles.configHeaderRow}>
+            <Text style={styles.configGroupLabel}>OBSERVED PLANT ZONE</Text>
+            <Text style={styles.configSelectedValue}>{selectedZone}</Text>
+          </View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsScroll}>
+            {COMMON_ZONES.map((z) => {
+              const isRestricted = z.id in RESTRICTED_ZONES_MAP;
+              const isSelected = selectedZone === z.id;
+              return (
+                <TouchableOpacity
+                  key={z.id}
+                  style={[
+                    styles.zoneChip,
+                    isSelected && styles.zoneChipSelected,
+                    isRestricted && styles.zoneChipRestricted,
+                  ]}
+                  onPress={() => setSelectedZone(z.id)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.zoneText, isSelected && styles.zoneTextSelected]}>
+                    {z.name} ({z.id})
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+
+        {/* Grouped Card 2: Spoken Language Preference */}
+        <View style={styles.configGroupCard}>
+          <View style={styles.configHeaderRow}>
+            <Text style={styles.configGroupLabel}>SPOKEN LANGUAGE</Text>
+            <Text style={styles.configSelectedValue}>
+              {INTAKE_LANGUAGES.find((l) => l.code === selectedLanguage)?.label || selectedLanguage}
+            </Text>
+          </View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsScroll}>
+            {INTAKE_LANGUAGES.map((l) => {
+              const isSelected = selectedLanguage === l.code;
+              return (
+                <TouchableOpacity
+                  key={l.code}
+                  style={[styles.langChip, isSelected && styles.langChipActive]}
+                  onPress={() => setSelectedLanguage(l.code)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.langText, isSelected && styles.langTextActive]}>
+                    {l.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+
+          {/* Regional Dialect Warning if Applicable */}
+          {(selectedLanguage === 'bn' || selectedLanguage === 'or') && (
+            <View style={styles.dialectWarningBox}>
+              <Text style={styles.dialectWarningText}>{i18n.t('dialectNotice')}</Text>
+            </View>
+          )}
+        </View>
 
         {/* Loading Spinner */}
         {isLoading && (
@@ -460,6 +610,13 @@ export const IncidentRecorderScreen: React.FC<IncidentRecorderScreenProps> = ({
             <Text style={styles.loadingText}>{statusMessage}</Text>
           </View>
         )}
+
+        {/* Security & Reliability Footer Note */}
+        <View style={styles.securityFooter}>
+          <Text style={styles.securityFooterText}>
+            🔒 On-Premise Encrypted • Offline Local Queue Enabled
+          </Text>
+        </View>
       </ScrollView>
     </View>
   );
@@ -525,10 +682,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.12)',
   },
+  typeBadgeEmergency: {
+    backgroundColor: 'rgba(255, 69, 58, 0.12)',
+    borderColor: 'rgba(255, 69, 58, 0.3)',
+  },
   typeBadgeText: {
     color: '#f8fafc',
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
+  headingSection: {
+    marginBottom: 16,
   },
   screenTitle: {
     fontSize: 26,
@@ -540,24 +705,237 @@ const styles = StyleSheet.create({
   screenSubtitle: {
     fontSize: 14,
     color: 'rgba(235, 235, 245, 0.65)',
-    marginBottom: 16,
+    lineHeight: 20,
     letterSpacing: -0.2,
   },
-  sectionLabel: {
+  segmentedControl: {
+    flexDirection: 'row',
+    backgroundColor: '#161618',
+    borderRadius: 14,
+    padding: 3,
+    marginBottom: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  segmentTab: {
+    flex: 1,
+    paddingVertical: 9,
+    alignItems: 'center',
+    borderRadius: 11,
+  },
+  segmentTabActive: {
+    backgroundColor: '#ffffff',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+  },
+  segmentText: {
+    color: 'rgba(235, 235, 245, 0.6)',
+    fontSize: 13,
+    fontWeight: '600',
+    letterSpacing: -0.2,
+  },
+  segmentTextActive: {
+    color: '#000000',
+    fontWeight: '700',
+  },
+  studioCard: {
+    backgroundColor: '#141416',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: 24,
+    padding: 22,
+    alignItems: 'center',
+    marginBottom: 18,
+  },
+  studioHeader: {
+    marginBottom: 10,
+    alignItems: 'center',
+  },
+  liveRecordingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 69, 58, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 69, 58, 0.3)',
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 9999,
+    gap: 6,
+  },
+  livePulseDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: '#FF453A',
+  },
+  liveRecordingText: {
+    color: '#FF453A',
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  idleReadyBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 9999,
+    gap: 6,
+  },
+  idleDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#30D158',
+  },
+  idleReadyText: {
+    color: 'rgba(235, 235, 245, 0.65)',
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 0.5,
+  },
+  timerRow: {
+    marginBottom: 10,
+  },
+  timerDigits: {
+    color: '#FFFFFF',
+    fontSize: 34,
+    fontWeight: '700',
+    fontVariant: ['tabular-nums'],
+    letterSpacing: 0.5,
+  },
+  waveformContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 44,
+    gap: 4.5,
+    marginBottom: 16,
+    paddingHorizontal: 16,
+  },
+  waveformBar: {
+    width: 3.5,
+    height: 40,
+    borderRadius: 2,
+    backgroundColor: '#FFFFFF',
+  },
+  micStageContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginVertical: 6,
+  },
+  micOuterHalo: {
+    width: 172,
+    height: 172,
+    borderRadius: 86,
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.06)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  micOuterHaloRecording: {
+    backgroundColor: 'rgba(255, 69, 58, 0.08)',
+    borderColor: 'rgba(255, 69, 58, 0.2)',
+  },
+  micInnerHalo: {
+    width: 136,
+    height: 136,
+    borderRadius: 68,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  micInnerHaloRecording: {
+    backgroundColor: 'rgba(255, 69, 58, 0.12)',
+    borderColor: 'rgba(255, 69, 58, 0.35)',
+  },
+  micHeroButton: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  micHeroIdle: {
+    backgroundColor: '#1c1c1e',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.22)',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+  },
+  micHeroRecording: {
+    backgroundColor: '#2c2c2e',
+    borderWidth: 2,
+    borderColor: '#FF453A',
+    shadowColor: '#FF453A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.45,
+    shadowRadius: 16,
+  },
+  micImage: {
+    width: 44,
+    height: 44,
+  },
+  micActionText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '700',
+    textAlign: 'center',
+    letterSpacing: -0.2,
+    marginTop: 14,
+  },
+  micSubText: {
+    color: 'rgba(235, 235, 245, 0.6)',
+    fontSize: 12,
+    textAlign: 'center',
+    marginTop: 4,
+    lineHeight: 16,
+  },
+  configGroupCard: {
+    backgroundColor: '#161618',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: 18,
+    padding: 14,
+    marginBottom: 14,
+  },
+  configHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+    paddingHorizontal: 2,
+  },
+  configGroupLabel: {
     color: 'rgba(235, 235, 245, 0.45)',
     fontSize: 11,
     fontWeight: '600',
-    letterSpacing: 0.2,
-    marginBottom: 8,
+    letterSpacing: 0.3,
     textTransform: 'uppercase',
   },
-  zoneScroll: {
-    marginBottom: 16,
+  configSelectedValue: {
+    color: 'rgba(235, 235, 245, 0.85)',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  chipsScroll: {
+    marginHorizontal: -4,
+    paddingHorizontal: 4,
   },
   zoneChip: {
-    backgroundColor: '#1c1c1e',
+    backgroundColor: '#242426',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
+    borderColor: 'rgba(255, 255, 255, 0.1)',
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 9999,
@@ -569,10 +947,10 @@ const styles = StyleSheet.create({
   },
   zoneChipRestricted: {
     borderColor: 'rgba(255, 69, 58, 0.6)',
-    backgroundColor: '#1c1c1e',
+    backgroundColor: '#242426',
   },
   zoneText: {
-    color: 'rgba(235, 235, 245, 0.65)',
+    color: 'rgba(235, 235, 245, 0.75)',
     fontSize: 13,
     fontWeight: '500',
   },
@@ -580,40 +958,10 @@ const styles = StyleSheet.create({
     color: '#000000',
     fontWeight: '700',
   },
-  tabContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#1c1c1e',
-    borderRadius: 9999,
-    padding: 4,
-    marginBottom: 18,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-  },
-  tabButton: {
-    flex: 1,
-    paddingVertical: 10,
-    alignItems: 'center',
-    borderRadius: 9999,
-  },
-  tabButtonActive: {
-    backgroundColor: '#ffffff',
-  },
-  tabText: {
-    color: 'rgba(235, 235, 245, 0.65)',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  tabTextActive: {
-    color: '#000000',
-    fontWeight: '700',
-  },
-  langScroll: {
-    marginBottom: 18,
-  },
   langChip: {
-    backgroundColor: '#1c1c1e',
+    backgroundColor: '#242426',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
+    borderColor: 'rgba(255, 255, 255, 0.1)',
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 9999,
@@ -621,118 +969,46 @@ const styles = StyleSheet.create({
   },
   langChipActive: {
     borderColor: '#ffffff',
-    backgroundColor: '#2c2c2e',
+    backgroundColor: '#ffffff',
   },
   langText: {
-    color: 'rgba(235, 235, 245, 0.65)',
+    color: 'rgba(235, 235, 245, 0.75)',
     fontSize: 13,
     fontWeight: '500',
   },
   langTextActive: {
-    color: '#ffffff',
-    fontWeight: '600',
+    color: '#000000',
+    fontWeight: '700',
   },
   dialectWarningBox: {
-    backgroundColor: '#1c1c1e',
+    backgroundColor: '#242426',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
     padding: 10,
-    borderRadius: 16,
-    marginBottom: 16,
+    borderRadius: 12,
+    marginTop: 10,
   },
   dialectWarningText: {
-    color: 'rgba(235, 235, 245, 0.65)',
+    color: 'rgba(235, 235, 245, 0.7)',
     fontSize: 12,
     lineHeight: 16,
     fontWeight: '500',
   },
-  voiceSection: {
+  securityFooter: {
+    marginTop: 8,
+    marginBottom: 20,
     alignItems: 'center',
-    justifyContent: 'center',
-    marginVertical: 28,
-    paddingHorizontal: 16,
   },
-  micHalo: {
-    width: 168,
-    height: 168,
-    borderRadius: 84,
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-  },
-  micHaloRecording: {
-    backgroundColor: 'rgba(255, 69, 58, 0.08)',
-    borderColor: 'rgba(255, 69, 58, 0.25)',
-  },
-  micHeroButton: {
-    width: 128,
-    height: 128,
-    borderRadius: 64,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  micHeroIdle: {
-    backgroundColor: '#1c1c1e',
-    borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.18)',
-  },
-  micHeroRecording: {
-    backgroundColor: '#2c2c2e',
-    borderWidth: 2,
-    borderColor: '#FF453A',
-    shadowColor: '#FF453A',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 16,
-  },
-  micImage: {
-    width: 50,
-    height: 50,
-  },
-  micActionText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '700',
-    textAlign: 'center',
-    letterSpacing: -0.2,
-  },
-  micSubText: {
-    color: 'rgba(235, 235, 245, 0.65)',
+  securityFooterText: {
+    color: 'rgba(235, 235, 245, 0.4)',
     fontSize: 12,
-    textAlign: 'center',
-    marginTop: 4,
-  },
-  recordingPulseBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginTop: 18,
-    backgroundColor: '#1c1c1e',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 9999,
-  },
-  redDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: '#FF453A',
-  },
-  recordingStatusText: {
-    color: '#ffffff',
-    fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '500',
   },
   textSection: {
-    marginTop: 10,
+    marginBottom: 16,
   },
   textArea: {
-    backgroundColor: '#1c1c1e',
+    backgroundColor: '#161618',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.12)',
     borderRadius: 18,
@@ -741,7 +1017,7 @@ const styles = StyleSheet.create({
     padding: 16,
     minHeight: 120,
     textAlignVertical: 'top',
-    marginBottom: 16,
+    marginBottom: 14,
   },
   submitTextButton: {
     backgroundColor: '#ffffff',
