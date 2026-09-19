@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: bsl-safety-backend
+    runtime: docker
+    rootDir: backend
+    dockerfilePath: Dockerfile
+    plan: starter
+    region: singapore # Closest to India for fast plant latency
+    envVars:
+      - key: PORT
+        value: 8000
+    disk:
+      name: bsl-data
+      mountPath: /app/data
+      sizeGB: 5

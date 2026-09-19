@@ -1,0 +1,126 @@
+from pathlib import Path
+import shutil
+import uuid
+
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from app.config import PHOTO_UPLOAD_DIR
+from app.database import get_db
+from app.models import Ticket
+from app.schemas import TicketOut, TicketUpdate
+
+router = APIRouter(prefix="/tickets", tags=["tickets"])
+
+PHOTO_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def _attach_photo_url(ticket: Ticket) -> Ticket:
+    if ticket and ticket.photo_proof_path:
+        filename = Path(ticket.photo_proof_path).name
+        url = f"/photos/{filename}"
+        ticket.photo_url = url
+        ticket.media_url = url
+        ext = Path(ticket.photo_proof_path).suffix.lower()
+        ticket.media_type = "video" if ext in [".mp4", ".webm", ".mov", ".mkv", ".avi"] else "image"
+    return ticket
+
+
+@router.get("", response_model=list[TicketOut])
+def list_tickets(routing_tier: str | None = None, status: str | None = None, db: Session = Depends(get_db)):
+    stmt = select(Ticket).order_by(Ticket.created_at.desc())
+    if routing_tier:
+        stmt = stmt.where(Ticket.routing_tier == routing_tier)
+    if status:
+        stmt = stmt.where(Ticket.status == status)
+    tickets = db.execute(stmt).scalars().all()
+    for t in tickets:
+        _attach_photo_url(t)
+    return tickets
+
+
+@router.get("/{ticket_id}", response_model=TicketOut)
+def get_ticket(ticket_id: str, db: Session = Depends(get_db)):
+    ticket = db.get(Ticket, ticket_id)
+    if not ticket:
+        raise HTTPException(404, "ticket not found")
+    _attach_photo_url(ticket)
+    return ticket
+
+
+@router.post("/{ticket_id}/photo", response_model=TicketOut)
+def upload_photo(
+    ticket_id: str,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+):
+    ticket = db.get(Ticket, ticket_id)
+    if not ticket:
+        raise HTTPException(404, "ticket not found")
+
+    dest = PHOTO_UPLOAD_DIR / f"{ticket_id}_{uuid.uuid4().hex[:8]}_{file.filename}"
+    with open(dest, "wb") as out:
+        shutil.copyfileobj(file.file, out)
+
+    ext = dest.suffix.lower()
+    is_video = ext in [".mp4", ".webm", ".mov", ".mkv", ".avi"]
+    media_type = "video" if is_video else "image"
+
+    ticket.photo_proof_path = str(dest)
+    ticket.media_type = media_type
+    photo_url = f"/photos/{dest.name}"
+    ticket.photo_url = photo_url
+    ticket.media_url = photo_url
+
+    # If safety report was already synthesized, update report with photo or video
+    if ticket.safety_report:
+        rep = dict(ticket.safety_report)
+        rep["photo_url"] = photo_url
+        rep["media_url"] = photo_url
+        rep["media_type"] = media_type
+        md = rep.get("report_markdown", "")
+        if "Field Evidence" not in md and "Photographic Field Evidence" not in md:
+            if is_video:
+                media_sec = (
+                    f"\n\n## Photographic & Video Field Evidence\n"
+                    f'<video controls width="100%" style="max-height: 400px; border-radius: 8px;" src="{photo_url}"></video>\n'
+                    f"*Verified video recording captured on site for Zone {ticket.zone_id or 'Plant Facility'}.*\n"
+                )
+            else:
+                media_sec = (
+                    f"\n\n## Photographic Field Evidence\n"
+                    f"![Incident Scene Photographic Proof]({photo_url})\n"
+                    f"*Verified photographic evidence captured on site for Zone {ticket.zone_id or 'Plant Facility'}.*\n"
+                )
+            rep["report_markdown"] = f"{md}\n{media_sec}"
+        ticket.safety_report = rep
+        ticket.guidance_text = rep.get("report_markdown")
+
+    db.add(ticket)
+    db.commit()
+    db.refresh(ticket)
+    _attach_photo_url(ticket)
+    return ticket
+
+
+@router.patch("/{ticket_id}", response_model=TicketOut)
+def update_ticket(ticket_id: str, payload: TicketUpdate, db: Session = Depends(get_db)):
+    ticket = db.get(Ticket, ticket_id)
+    if not ticket:
+        raise HTTPException(404, "ticket not found")
+
+    if payload.status is not None:
+        ticket.status = payload.status
+    if payload.resolution_notes is not None:
+        ticket.resolution_notes = payload.resolution_notes
+    if payload.routing_tier is not None:
+        ticket.routing_tier = payload.routing_tier
+    if payload.language is not None:
+        ticket.language = payload.language
+
+    db.add(ticket)
+    db.commit()
+    db.refresh(ticket)
+    _attach_photo_url(ticket)
+    return ticket

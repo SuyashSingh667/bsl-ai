@@ -1,0 +1,301 @@
+{
+  "zones": [
+    {
+      "zone_id": "RMY",
+      "name": "Raw Material Yard",
+      "category": "raw_material",
+      "hazard_class": ["dust", "mechanical"],
+      "footprint_radius_m": 150,
+      "occupancy": {"day": 12, "night": 6},
+      "centroid": {"x": 0, "y": 0},
+      "source": "mocked",
+      "notes": "Coal/ore intake, rail sidings. Placed at western edge per typical plant layout."
+    },
+    {
+      "zone_id": "COB",
+      "name": "Coke Oven Battery & By-Product Plant",
+      "category": "hot_process",
+      "hazard_class": ["toxic_gas", "explosion", "fire", "high_heat"],
+      "footprint_radius_m": 120,
+      "occupancy": {"day": 25, "night": 15},
+      "centroid": {"x": 400, "y": 0},
+      "source": "mocked",
+      "notes": "Coke oven gas is toxic and explosive; tar/benzene by-products present."
+    },
+    {
+      "zone_id": "SIN",
+      "name": "Sinter Plant",
+      "category": "hot_process",
+      "hazard_class": ["dust", "high_heat", "fumes"],
+      "footprint_radius_m": 100,
+      "occupancy": {"day": 18, "night": 10},
+      "centroid": {"x": 800, "y": 0},
+      "source": "mocked",
+      "notes": "Iron ore fines processing, feeds blast furnace."
+    },
+    {
+      "zone_id": "BF1",
+      "name": "Blast Furnace 1",
+      "category": "hot_process",
+      "hazard_class": ["toxic_gas", "explosion", "molten_metal", "extreme_heat"],
+      "footprint_radius_m": 80,
+      "occupancy": {"day": 20, "night": 12},
+      "centroid": {"x": 1300, "y": 80},
+      "source": "mocked",
+      "notes": "BF gas is CO-rich, toxic and flammable. Highest-severity zone class."
+    },
+    {
+      "zone_id": "BF2",
+      "name": "Blast Furnace 2",
+      "category": "hot_process",
+      "hazard_class": ["toxic_gas", "explosion", "molten_metal", "extreme_heat"],
+      "footprint_radius_m": 80,
+      "occupancy": {"day": 20, "night": 12},
+      "centroid": {"x": 1300, "y": -80},
+      "source": "mocked",
+      "notes": "Second furnace, ~150m from BF1."
+    },
+    {
+      "zone_id": "GHS",
+      "name": "Gas Holder Station",
+      "category": "utility_gas",
+      "hazard_class": ["toxic_gas", "explosion"],
+      "footprint_radius_m": 60,
+      "occupancy": {"day": 4, "night": 2},
+      "centroid": {"x": 1550, "y": 0},
+      "source": "mocked",
+      "notes": "Stores/distributes BF gas, coke oven gas, LD gas. Classic large-radius gas-leak source; low routine occupancy but large potential blast radius."
+    },
+    {
+      "zone_id": "SMS",
+      "name": "Steel Melting Shop / LD Converters",
+      "category": "hot_process",
+      "hazard_class": ["molten_metal", "explosion", "toxic_gas", "extreme_heat"],
+      "footprint_radius_m": 110,
+      "occupancy": {"day": 28, "night": 16},
+      "centroid": {"x": 2200, "y": 0},
+      "source": "mocked",
+      "notes": "Receives hot metal from blast furnaces, LD gas + oxygen lancing hazards."
+    },
+    {
+      "zone_id": "CC",
+      "name": "Continuous Casting",
+      "category": "hot_process",
+      "hazard_class": ["molten_metal", "steam_explosion", "extreme_heat"],
+      "footprint_radius_m": 90,
+      "occupancy": {"day": 22, "night": 14},
+      "centroid": {"x": 2350, "y": 0},
+      "source": "mocked",
+      "notes": "Adjacent to SMS. Water/molten-metal contact risk."
+    },
+    {
+      "zone_id": "LWS",
+      "name": "Loco & Wagon Shed",
+      "category": "maintenance",
+      "hazard_class": ["mechanical"],
+      "footprint_radius_m": 70,
+      "occupancy": {"day": 10, "night": 5},
+      "centroid": {"x": 3650, "y": -300},
+      "source": "confirmed",
+      "notes": "From Mapcarta/OSM labels near Plant Plaza Road."
+    },
+    {
+      "zone_id": "RB",
+      "name": "Rail Bhawan",
+      "category": "admin",
+      "hazard_class": [],
+      "footprint_radius_m": 40,
+      "occupancy": {"day": 15, "night": 3},
+      "centroid": {"x": 3700, "y": -280},
+      "source": "confirmed",
+      "notes": "Rail administration building."
+    },
+    {
+      "zone_id": "SB",
+      "name": "Store Building",
+      "category": "storage",
+      "hazard_class": [],
+      "footprint_radius_m": 50,
+      "occupancy": {"day": 8, "night": 2},
+      "centroid": {"x": 3750, "y": -290},
+      "source": "confirmed",
+      "notes": "General materials storage."
+    },
+    {
+      "zone_id": "PS",
+      "name": "Pattern Shop",
+      "category": "workshop",
+      "hazard_class": ["fire"],
+      "footprint_radius_m": 45,
+      "occupancy": {"day": 10, "night": 2},
+      "centroid": {"x": 3800, "y": -270},
+      "source": "confirmed",
+      "notes": "Foundry pattern-making workshop."
+    },
+    {
+      "zone_id": "ICF",
+      "name": "Iron & Copper Foundry",
+      "category": "workshop",
+      "hazard_class": ["molten_metal", "fire"],
+      "footprint_radius_m": 55,
+      "occupancy": {"day": 15, "night": 6},
+      "centroid": {"x": 3850, "y": -300},
+      "source": "confirmed",
+      "notes": "Metal casting workshop, burn hazard."
+    },
+    {
+      "zone_id": "SS",
+      "name": "Structural Shop",
+      "category": "workshop",
+      "hazard_class": ["mechanical", "fire"],
+      "footprint_radius_m": 55,
+      "occupancy": {"day": 14, "night": 4},
+      "centroid": {"x": 3900, "y": -260},
+      "source": "confirmed",
+      "notes": "Structural fabrication."
+    },
+    {
+      "zone_id": "MS",
+      "name": "Machine Shop",
+      "category": "workshop",
+      "hazard_class": ["mechanical"],
+      "footprint_radius_m": 60,
+      "occupancy": {"day": 16, "night": 5},
+      "centroid": {"x": 3980, "y": -250},
+      "source": "confirmed",
+      "notes": "Machining/mechanical hazards."
+    },
+    {
+      "zone_id": "RCL",
+      "name": "R&C Lab",
+      "category": "lab",
+      "hazard_class": ["chemical"],
+      "footprint_radius_m": 40,
+      "occupancy": {"day": 8, "night": 2},
+      "centroid": {"x": 4030, "y": -260},
+      "source": "confirmed",
+      "notes": "Likely Research & Control or Refractory & Ceramic lab; function inferred from label only."
+    },
+    {
+      "zone_id": "ERS",
+      "name": "Engineering Repair Shop",
+      "category": "maintenance",
+      "hazard_class": ["mechanical"],
+      "footprint_radius_m": 55,
+      "occupancy": {"day": 12, "night": 4},
+      "centroid": {"x": 4080, "y": -240},
+      "source": "confirmed",
+      "notes": "Full name inferred from 'ERS' label; common SAIL-plant department naming."
+    },
+    {
+      "zone_id": "SM",
+      "name": "S Mill",
+      "category": "mill",
+      "hazard_class": ["mechanical", "high_heat"],
+      "footprint_radius_m": 90,
+      "occupancy": {"day": 22, "night": 12},
+      "centroid": {"x": 4150, "y": 30},
+      "source": "confirmed",
+      "notes": "Rolling operation; exact mill type inferred from label only."
+    },
+    {
+      "zone_id": "ACY",
+      "name": "Addn Coil Yard",
+      "category": "storage",
+      "hazard_class": ["mechanical"],
+      "footprint_radius_m": 80,
+      "occupancy": {"day": 10, "night": 4},
+      "centroid": {"x": 4250, "y": 50},
+      "source": "confirmed",
+      "notes": "Coil storage yard."
+    },
+    {
+      "zone_id": "HRCF",
+      "name": "Hot Rolled Coil Facility",
+      "category": "mill",
+      "hazard_class": ["high_heat", "mechanical"],
+      "footprint_radius_m": 100,
+      "occupancy": {"day": 24, "night": 14},
+      "centroid": {"x": 4350, "y": 20},
+      "source": "confirmed",
+      "notes": "Hot-end coil handling; full name inferred from label."
+    },
+    {
+      "zone_id": "CRM",
+      "name": "Cold Rolling Mill",
+      "category": "mill",
+      "hazard_class": ["chemical", "mechanical", "fire"],
+      "footprint_radius_m": 110,
+      "occupancy": {"day": 30, "night": 16},
+      "centroid": {"x": 4450, "y": -20},
+      "source": "confirmed",
+      "notes": "Rolling with oils/acids; chemical + mechanical hazard."
+    },
+    {
+      "zone_id": "CRM3",
+      "name": "Cold Rolling Mill Unit III",
+      "category": "mill",
+      "hazard_class": ["chemical", "mechanical", "fire"],
+      "footprint_radius_m": 110,
+      "occupancy": {"day": 28, "night": 15},
+      "centroid": {"x": 4550, "y": -20},
+      "source": "confirmed",
+      "notes": "Adjacent CRM unit."
+    },
+    {
+      "zone_id": "TCR",
+      "name": "Traffic Control Room",
+      "category": "utility",
+      "hazard_class": [],
+      "footprint_radius_m": 20,
+      "occupancy": {"day": 4, "night": 2},
+      "centroid": {"x": 4600, "y": -150},
+      "source": "confirmed",
+      "notes": "Plant traffic/logistics coordination point."
+    },
+    {
+      "zone_id": "GATE1",
+      "name": "Plant Gate No-1",
+      "category": "boundary",
+      "hazard_class": [],
+      "footprint_radius_m": 20,
+      "occupancy": {"day": 6, "night": 3},
+      "centroid": {"x": 4700, "y": -200},
+      "source": "confirmed",
+      "notes": "Plant boundary opening directly onto Bokaro Steel City township."
+    },
+    {
+      "zone_id": "PWR",
+      "name": "Bokaro Works Power Plant",
+      "category": "utility_power",
+      "hazard_class": ["fire", "high_heat", "boiler_explosion"],
+      "footprint_radius_m": 150,
+      "occupancy": {"day": 20, "night": 12},
+      "centroid": {"x": 2000, "y": 1400},
+      "source": "confirmed",
+      "notes": "On the cooling-pond edge, near the Damodar river."
+    },
+    {
+      "zone_id": "POND",
+      "name": "Cooling Pond / Reservoir",
+      "category": "water_body",
+      "hazard_class": [],
+      "footprint_radius_m": 300,
+      "occupancy": {"day": 0, "night": 0},
+      "centroid": {"x": 2300, "y": 1300},
+      "source": "confirmed",
+      "notes": "Not an occupied zone; acts as a physical barrier/evacuation obstacle."
+    },
+    {
+      "zone_id": "TOWNSHIP",
+      "name": "Bokaro Steel City Township (outer boundary)",
+      "category": "civilian",
+      "hazard_class": [],
+      "footprint_radius_m": 50,
+      "occupancy": null,
+      "centroid": {"x": 5200, "y": -250},
+      "source": "confirmed",
+      "notes": "Centroid marks the nearest built-up edge of the township to the plant (just past Plant Gate No-1), not the town center — footprint is small on purpose so this only triggers when a hazard genuinely reaches the boundary, not just 'somewhere within the town's overall size'. Headcount not modeled; any reach here triggers a civilian-exposure escalation regardless of estimated count."
+    }
+  ]
+}

@@ -1,0 +1,616 @@
+import { useEffect, useState } from "react";
+import { audioUrl, getSimilarIncidents, getTickets, updateTicket, photoUrl } from "../api";
+
+const TIER_LABELS = {
+  emergency_authority: "Emergency Authority",
+  plant_safety_officer: "Plant Safety Officer",
+  shift_supervisor: "Shift Supervisor",
+  safety_team_queue: "Safety Team Queue",
+};
+
+const LANGUAGE_NAMES = {
+  en: "English",
+  hi: "हिन्दी (Hindi)",
+  bn: "বাংলা (Bengali)",
+  ta: "தமிழ் (Tamil)",
+  te: "తెలుగు (Telugu)",
+  mr: "मराठी (Marathi)",
+  gu: "ગુજરાતી (Gujarati)",
+  kn: "ಕನ್ನಡ (Kannada)",
+  ml: "മലയാളം (Malayalam)",
+  pa: "ਪੰਜਾਬੀ (Punjabi)",
+  or: "ଓଡ଼ିଆ (Odia)",
+};
+
+export default function Dashboard() {
+  const [tickets, setTickets] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [filterTier, setFilterTier] = useState("all");
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedTicket, setSelectedTicket] = useState(null);
+  const [similarData, setSimilarData] = useState(null);
+  const [updating, setUpdating] = useState(false);
+  const [editStatus, setEditStatus] = useState("");
+  const [editTier, setEditTier] = useState("");
+  const [editNotes, setEditNotes] = useState("");
+  const [saveSuccess, setSaveSuccess] = useState(false);
+
+  async function loadTickets() {
+    setLoading(true);
+    setError(null);
+    try {
+      const list = await getTickets({ routingTier: filterTier, status: filterStatus });
+      setTickets(list);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadTickets();
+  }, [filterTier, filterStatus]);
+
+  async function handleSelectTicket(t) {
+    setSelectedTicket(t);
+    setEditStatus(t.status || "open");
+    setEditTier(t.routing_tier || "safety_team_queue");
+    setEditNotes(t.resolution_notes || "");
+    setSaveSuccess(false);
+    setSimilarData(null);
+    try {
+      const sim = await getSimilarIncidents(t.id);
+      setSimilarData(sim);
+    } catch {
+      // similar endpoint non-critical
+    }
+  }
+
+  async function handleSaveUpdates(e) {
+    e.preventDefault();
+    if (!selectedTicket) return;
+    setUpdating(true);
+    setSaveSuccess(false);
+    try {
+      const updated = await updateTicket(selectedTicket.id, {
+        status: editStatus,
+        routing_tier: editTier,
+        resolution_notes: editNotes,
+      });
+      setSelectedTicket(updated);
+      setSaveSuccess(true);
+      // update ticket in list
+      setTickets((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
+    } catch (err) {
+      alert("Failed to save updates: " + err.message);
+    } finally {
+      setUpdating(false);
+    }
+  }
+
+  const filteredTickets = tickets.filter((t) => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      t.id.toLowerCase().includes(q) ||
+      (t.zone_id && t.zone_id.toLowerCase().includes(q)) ||
+      (t.predicted_category && t.predicted_category.toLowerCase().includes(q)) ||
+      (t.incident_description && t.incident_description.toLowerCase().includes(q)) ||
+      (t.incident_description_en && t.incident_description_en.toLowerCase().includes(q))
+    );
+  });
+
+  const emergencyCount = tickets.filter(
+    (t) => t.report_type === "emergency" || t.routing_tier === "emergency_authority"
+  ).length;
+  const highRiskCount = tickets.filter((t) => (t.risk_score || 0) >= 0.7).length;
+  const inProgressCount = tickets.filter((t) => t.status === "in_progress").length;
+  const openCount = tickets.filter((t) => t.status === "open").length;
+
+  return (
+    <div className="dashboard">
+      <div className="dashboard-header">
+        <div>
+          <h2>Safety Intelligence Command Center</h2>
+          <p className="subtitle">Real-time incident triage, spatial verification & decision support</p>
+        </div>
+        <button className="refresh-btn" onClick={loadTickets} disabled={loading}>
+          🔄 {loading ? "Refreshing..." : "Refresh Queue"}
+        </button>
+      </div>
+
+      {/* Metrics Row */}
+      <div className="metrics-row">
+        <div className="metric-card">
+          <div className="metric-value">{tickets.length}</div>
+          <div className="metric-label">Total Logged</div>
+        </div>
+        <div className="metric-card emergency">
+          <div className="metric-value">{emergencyCount}</div>
+          <div className="metric-label">Emergency / Escalated</div>
+        </div>
+        <div className="metric-card high-risk">
+          <div className="metric-value">{highRiskCount}</div>
+          <div className="metric-label">High Risk (≥0.70)</div>
+        </div>
+        <div className="metric-card active">
+          <div className="metric-value">{openCount + inProgressCount}</div>
+          <div className="metric-label">Open / In Progress</div>
+        </div>
+      </div>
+
+      {/* Filters Bar */}
+      <div className="filters-bar">
+        <div className="filter-group">
+          <label>Status:</label>
+          <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
+            <option value="all">All Statuses</option>
+            <option value="open">Open</option>
+            <option value="in_progress">In Progress</option>
+            <option value="escalated">Escalated</option>
+            <option value="resolved">Resolved</option>
+          </select>
+        </div>
+
+        <div className="filter-group">
+          <label>Routing Tier:</label>
+          <select value={filterTier} onChange={(e) => setFilterTier(e.target.value)}>
+            <option value="all">All Tiers</option>
+            <option value="emergency_authority">Emergency Authority</option>
+            <option value="plant_safety_officer">Plant Safety Officer</option>
+            <option value="shift_supervisor">Shift Supervisor</option>
+            <option value="safety_team_queue">Safety Team Queue</option>
+          </select>
+        </div>
+
+        <div className="filter-group search-group">
+          <input
+            type="text"
+            placeholder="Search ID, Zone, Category, Text..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+      </div>
+
+      {error && <p className="error-text">{error}</p>}
+
+      {/* Tickets Table */}
+      <div className="table-container">
+        <table className="tickets-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Time</th>
+              <th>Type</th>
+              <th>Category</th>
+              <th>Zone</th>
+              <th>Risk Score</th>
+              <th>Routing Tier</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredTickets.length === 0 ? (
+              <tr>
+                <td colSpan="9" style={{ textAlign: "center", padding: "2rem", color: "#888" }}>
+                  {loading ? "Loading incidents..." : "No incidents found matching current filters."}
+                </td>
+              </tr>
+            ) : (
+              filteredTickets.map((t) => {
+                const isEmerg = t.report_type === "emergency" || t.routing_tier === "emergency_authority";
+                const risk = t.risk_score != null ? t.risk_score : 0;
+                let riskClass = "risk-low";
+                if (risk >= 0.7) riskClass = "risk-high";
+                else if (risk >= 0.4) riskClass = "risk-med";
+
+                return (
+                  <tr key={t.id} className={isEmerg ? "row-emergency" : ""}>
+                    <td className="ticket-id-cell">{t.id}</td>
+                    <td className="date-cell">
+                      {new Date(t.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                    </td>
+                    <td>
+                      <span className={`pill ${t.report_type === "emergency" ? "pill-emergency" : "pill-suspected"}`}>
+                        {t.report_type}
+                      </span>
+                    </td>
+                    <td>
+                      <div>
+                        <strong>{(t.predicted_category || "Unclassified").replaceAll("_", " ")}</strong>
+                        {Boolean(t.photo_url || t.photo_proof_path) && (() => {
+                          const src = t.photo_url || t.photo_proof_path || "";
+                          const isVid = t.media_type === "video" || /\.(mp4|webm|mov|mkv|avi)(\?.*)?$/i.test(src);
+                          return (
+                            <span className="table-photo-badge" title={isVid ? "Video field evidence attached" : "Photographic evidence attached"}>
+                              {isVid ? "🎥" : "📷"}
+                            </span>
+                          );
+                        })()}
+                      </div>
+                    </td>
+                    <td>{t.zone_id || "—"}</td>
+                    <td>
+                      <span className={`risk-pill ${riskClass}`}>{t.risk_score != null ? t.risk_score : "—"}</span>
+                    </td>
+                    <td className="tier-cell">{TIER_LABELS[t.routing_tier] || t.routing_tier || "—"}</td>
+                    <td>
+                      <span className={`status-pill status-${t.status}`}>{t.status}</span>
+                    </td>
+                    <td>
+                      <button className="inspect-btn" onClick={() => handleSelectTicket(t)}>
+                        Inspect
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Ticket Inspector Modal / Drawer */}
+      {selectedTicket && (
+        <div className="modal-backdrop" onClick={() => setSelectedTicket(null)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div>
+                <h3>Incident Ticket #{selectedTicket.id}</h3>
+                <span className={`pill ${selectedTicket.report_type === "emergency" ? "pill-emergency" : "pill-suspected"}`}>
+                  {selectedTicket.report_type.toUpperCase()}
+                </span>
+                <span className={`status-pill status-${selectedTicket.status}`} style={{ marginLeft: "8px" }}>
+                  {selectedTicket.status}
+                </span>
+              </div>
+              <button className="close-btn" onClick={() => setSelectedTicket(null)}>
+                ✕
+              </button>
+            </div>
+
+            <div className="modal-body">
+              {/* Recurring Hazard Alert */}
+              {similarData?.recurring_hazard && (
+                <div className="hazard-alert-banner">
+                  ⚠ <strong>RECURRING HAZARD ALERT:</strong> {similarData.recurrence_note}
+                </div>
+              )}
+
+              {/* Core Information Section */}
+              <div className="inspector-section">
+                <h4>Reporter & Narrative</h4>
+                <div className="info-grid">
+                  <div>
+                    <strong>Reported At:</strong> {new Date(selectedTicket.created_at).toLocaleString()}
+                  </div>
+                  <div>
+                    <strong>Employee ID:</strong> {selectedTicket.employee_id || "Anonymous"}
+                  </div>
+                  <div>
+                    <strong>Language:</strong> {LANGUAGE_NAMES[selectedTicket.language] || selectedTicket.language?.toUpperCase()}{" "}
+                    {selectedTicket.language_confidence && `(${Math.round(selectedTicket.language_confidence * 100)}%)`}
+                  </div>
+                  <div>
+                    <strong>Reported Zone:</strong> {selectedTicket.zone_id || "Unspecified"}
+                  </div>
+                </div>
+
+                <div className="narrative-box">
+                  <p>
+                    <strong>Original Statement ({selectedTicket.language}):</strong>
+                    <br />
+                    "{selectedTicket.incident_description}"
+                  </p>
+                  {selectedTicket.incident_description_en &&
+                    selectedTicket.incident_description_en !== selectedTicket.incident_description && (
+                      <p>
+                        <strong>English Translation:</strong>
+                        <br />
+                        "{selectedTicket.incident_description_en}"
+                      </p>
+                    )}
+                </div>
+
+                {selectedTicket.audio_path && (
+                  <div className="audio-player-row">
+                    <span className="audio-label">Original Audio Recording:</span>
+                    <audio controls src={audioUrl(selectedTicket.audio_path)} />
+                  </div>
+                )}
+              </div>
+
+              {/* Photographic or Video Field Evidence */}
+              {(selectedTicket.photo_url || selectedTicket.media_url || selectedTicket.photo_proof_path) ? (() => {
+                const src = photoUrl(selectedTicket.media_url || selectedTicket.photo_url || selectedTicket.photo_proof_path);
+                const isVid = selectedTicket.media_type === "video" || /\.(mp4|webm|mov|mkv|avi)(\?.*)?$/i.test(src || "");
+                return (
+                  <div className="inspector-section photo-inspector-section">
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
+                      <h4>{isVid ? "🎥 Visual Field Evidence (Video Recording)" : "📸 Photographic Field Evidence"}</h4>
+                      <span className="badge-verified-photo">{isVid ? "✓ Video Attached" : "✓ Photo Attached"}</span>
+                    </div>
+                    <div className="inspector-photo-container">
+                      {isVid ? (
+                        <video
+                          controls
+                          playsInline
+                          src={src}
+                          className="inspector-video-img"
+                        />
+                      ) : (
+                        <img
+                          src={src}
+                          alt={`Photographic evidence for incident #${selectedTicket.id}`}
+                          className="inspector-photo-img"
+                          onClick={() => window.open(src, "_blank")}
+                        />
+                      )}
+                      <p className="photo-caption-sub">
+                        File: <code>{selectedTicket.photo_proof_path?.split("/").pop() || "evidence_file"}</code> ({isVid ? "Recorded field video" : "Click image to view full resolution"})
+                      </p>
+                    </div>
+                  </div>
+                );
+              })() : selectedTicket.requires_photo_proof ? (
+                <div className="inspector-section photo-inspector-section">
+                  <h4>📸🎥 Visual Field Evidence</h4>
+                  <div className="missing-photo-alert">
+                    ⚠ <strong>MANDATORY PROOF REQUIRED:</strong> This incident category requires visual proof (photo or video), but no evidence has been attached yet.
+                  </div>
+                </div>
+              ) : null}
+
+              {/* Spatial Impact Assessment */}
+              {selectedTicket.impact_assessment?.applicable && (
+                <div className="inspector-section">
+                  <h4>Spatial Impact Assessment</h4>
+                  <div className="impact-box">
+                    <p>
+                      <strong>Affected Zones:</strong> {selectedTicket.impact_assessment.affected_zones.length} zone(s)
+                      within hazard radius
+                    </p>
+                    <p>
+                      <strong>Estimated Workforce at Risk:</strong>{" "}
+                      {selectedTicket.impact_assessment.estimated_persons_at_risk_range[0]} –{" "}
+                      {selectedTicket.impact_assessment.estimated_persons_at_risk_range[1]} persons
+                    </p>
+                    {selectedTicket.impact_assessment.civilian_exposure_alert && (
+                      <p className="civilian-alert">
+                        ⚠ <strong>CIVILIAN EXPOSURE WARNING:</strong> Blast or toxic plume envelope extends near plant perimeter!
+                      </p>
+                    )}
+                    <table className="sub-table">
+                      <thead>
+                        <tr>
+                          <th>Zone</th>
+                          <th>Zone ID</th>
+                          <th>Band</th>
+                          <th>Distance</th>
+                          <th>Modeled At Risk</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {selectedTicket.impact_assessment.affected_zones.map((az) => (
+                          <tr key={az.zone_id}>
+                            <td>{az.name}</td>
+                            <td>{az.zone_id}</td>
+                            <td>
+                              <span className={`band-pill band-${az.band}`}>{az.band}</span>
+                            </td>
+                            <td>{az.distance_m} m</td>
+                            <td>
+                              {az.estimated_persons_at_risk_range
+                                ? `${az.estimated_persons_at_risk_range[0]}–${az.estimated_persons_at_risk_range[1]}`
+                                : "Unmodeled"}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Verified Evidence Findings Matrix */}
+              {selectedTicket.safety_report?.verified_summary && (
+                <div className="inspector-section">
+                  <h4>Verified Evidence & Fact Findings</h4>
+                  <table className="findings-table">
+                    <tbody>
+                      <tr>
+                        <td className="finding-label">Visual Confirmation:</td>
+                        <td className="finding-value">{selectedTicket.safety_report.verified_summary.observation_mode}</td>
+                      </tr>
+                      <tr>
+                        <td className="finding-label">Hazard Activity:</td>
+                        <td className="finding-value">{selectedTicket.safety_report.verified_summary.active_state}</td>
+                      </tr>
+                      <tr>
+                        <td className="finding-label">Identified Equipment:</td>
+                        <td className="finding-value"><strong>{selectedTicket.safety_report.verified_summary.equipment}</strong></td>
+                      </tr>
+                      <tr>
+                        <td className="finding-label">Personnel Exposed:</td>
+                        <td className="finding-value">{selectedTicket.safety_report.verified_summary.exposed_personnel}</td>
+                      </tr>
+                      <tr>
+                        <td className="finding-label">Reported Symptoms:</td>
+                        <td className="finding-value">{selectedTicket.safety_report.verified_summary.symptoms}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {/* Verification Interview Transcript */}
+              {selectedTicket.verification_questions?.length > 0 && (
+                <div className="inspector-section">
+                  <h4>Verification Interview Q&A ({selectedTicket.verification_status?.replaceAll("_", " ")})</h4>
+                  <p className="subtitle">
+                    Verification Score:{" "}
+                    <strong>
+                      {selectedTicket.verification_score != null
+                        ? `${Math.round(selectedTicket.verification_score * 100)}%`
+                        : "N/A"}
+                    </strong>
+                  </p>
+                  <div className="qa-list">
+                    {selectedTicket.verification_questions.map((q, idx) => (
+                      <div key={idx} className="qa-item">
+                        <p className="qa-question">
+                          <strong>Q{idx + 1}:</strong> {q}
+                        </p>
+                        <p className="qa-answer">
+                          <strong>A:</strong> {selectedTicket.verification_answers?.[idx] || "—"}
+                          {selectedTicket.verification_answers_en?.[idx] &&
+                            selectedTicket.verification_answers_en[idx] !== selectedTicket.verification_answers[idx] && (
+                              <span className="translated-note">
+                                {" "}
+                                (EN: "{selectedTicket.verification_answers_en[idx]}")
+                              </span>
+                            )}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* RAG Guidance & Citations */}
+              {selectedTicket.guidance_text && (
+                <div className="inspector-section">
+                  <h4>Grounded SOP Guidance</h4>
+                  <div className="guidance-box">
+                    <pre className="guidance-pre">{selectedTicket.guidance_text}</pre>
+                    {selectedTicket.guidance_sources?.length > 0 && (
+                      <div className="sources-list">
+                        <strong>Referenced Standard Operating Procedures:</strong>
+                        <ul>
+                          {selectedTicket.guidance_sources.map((s, i) => (
+                            <li key={i}>
+                              {s.title} — <em>{s.section}</em> ({s.path})
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Similar Historical Incidents */}
+              {similarData?.similar_tickets?.length > 0 && (
+                <div className="inspector-section">
+                  <h4>Similar Past Incidents</h4>
+                  <table className="sub-table">
+                    <thead>
+                      <tr>
+                        <th>ID</th>
+                        <th>Date</th>
+                        <th>Zone</th>
+                        <th>Category</th>
+                        <th>Similarity</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {similarData.similar_tickets.map((st) => (
+                        <tr key={st.id}>
+                          <td>{st.id}</td>
+                          <td>{new Date(st.created_at).toLocaleDateString()}</td>
+                          <td>
+                            {st.zone_id}{" "}
+                            {st.is_same_zone && <span className="same-zone-tag">Same Zone</span>}
+                          </td>
+                          <td>{st.predicted_category?.replaceAll("_", " ")}</td>
+                          <td>{Math.round(st.similarity * 100)}%</td>
+                          <td>{st.status}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {/* Designated Emergency Dispatch Recipients */}
+              {selectedTicket.safety_report?.recipients?.length > 0 && (
+                <div className="inspector-section recipients-inspector-section">
+                  <h4>🚨 Designated Bokaro Emergency Dispatch Recipients</h4>
+                  <p className="subtitle" style={{ marginBottom: "0.75rem" }}>
+                    Automated safety authority dispatch routing based on hazard category, spatial zone, and risk score:
+                  </p>
+                  <div className="recipients-grid">
+                    {selectedTicket.safety_report.recipients.map((rec, idx) => (
+                      <div key={idx} className="recipient-row-card">
+                        <div className="recipient-row-header">
+                          <strong>{rec.department || rec.dept}</strong>
+                          <span className="recipient-unit-badge">{rec.priority || rec.unit}</span>
+                        </div>
+                        <div className="recipient-row-details">
+                          <div><span className="rec-label">Role:</span> {rec.role}</div>
+                          <div><span className="rec-label">Contact / Ext:</span> <code>{rec.contact || rec.hotline}</code></div>
+                          <div><span className="rec-label">Status:</span> <span className="channel-pill">{rec.status || rec.dispatch_channel}</span></div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Resolution & Officer Actions */}
+              <div className="inspector-section resolution-section">
+                <h4>Safety Officer Actions & Resolution</h4>
+                <form onSubmit={handleSaveUpdates} className="resolution-form">
+                  <div className="form-row">
+                    <div className="form-field">
+                      <label>Update Status:</label>
+                      <select value={editStatus} onChange={(e) => setEditStatus(e.target.value)}>
+                        <option value="open">Open</option>
+                        <option value="in_progress">In Progress</option>
+                        <option value="resolved">Resolved</option>
+                        <option value="escalated">Escalated</option>
+                      </select>
+                    </div>
+
+                    <div className="form-field">
+                      <label>Reassign Routing Tier:</label>
+                      <select value={editTier} onChange={(e) => setEditTier(e.target.value)}>
+                        <option value="emergency_authority">Emergency Authority</option>
+                        <option value="plant_safety_officer">Plant Safety Officer</option>
+                        <option value="shift_supervisor">Shift Supervisor</option>
+                        <option value="safety_team_queue">Safety Team Queue</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="form-field">
+                    <label>Resolution / Investigation Notes:</label>
+                    <textarea
+                      rows={3}
+                      value={editNotes}
+                      onChange={(e) => setEditNotes(e.target.value)}
+                      placeholder="Add official findings, dispatch notes, corrective actions..."
+                    />
+                  </div>
+
+                  <div className="form-actions">
+                    <button type="submit" className="save-btn" disabled={updating}>
+                      {updating ? "Saving..." : "Save Ticket Updates"}
+                    </button>
+                    {saveSuccess && <span className="success-msg">✓ Updates saved successfully</span>}
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
