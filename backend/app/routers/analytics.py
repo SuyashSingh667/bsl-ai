@@ -13,10 +13,28 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.schemas import CultureMetricsOut, IncidentTrackerOut, SafetyTrendsOut
-from app.services import trend_analytics
+from app.schemas import CultureMetricsOut, IncidentTrackerOut, OperationalMetricsOut, SafetyTrendsOut
+from app.services import operational_metrics, trend_analytics
 
 router = APIRouter(prefix="/analytics", tags=["analytics"])
+
+
+@router.get("/operational-metrics", response_model=OperationalMetricsOut)
+def get_operational_metrics_endpoint(
+    plant_id: str = "bsl_bokaro",
+    window_days: int | None = None,
+    db: Session = Depends(get_db),
+):
+    """
+    Phase 8 — Seven key safety-operations KPIs:
+    time_to_first_dispatch, time_to_acknowledge, reports_per_100_workers_per_month,
+    near_miss_closure_time, transcription_confidence, pct_reports_completed_offline,
+    false_dispatch_rate.
+
+    window_days defaults to BSL_METRICS_WINDOW_DAYS env var (default 30).
+    All None values indicate insufficient data; raw counts are included for transparency.
+    """
+    return operational_metrics.get_operational_metrics(plant_id, db, window_days)
 
 
 @router.get("/trends", response_model=SafetyTrendsOut)

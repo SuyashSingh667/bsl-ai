@@ -15,6 +15,7 @@ from app.schemas import (
     ActionCloseRequest,
     DispatchAckRequest,
     DispatchOnSiteRequest,
+    MarkFalseAlarmRequest,
     TicketOut,
     TicketUpdate,
 )
@@ -407,5 +408,45 @@ def export_ticket_pdf_dossier(ticket_id: str, db: Session = Depends(get_db)):
         },
     )
 
+@router.post("/{ticket_id}/mark-false-alarm", response_model=TicketOut)
+def mark_ticket_as_false_alarm(
+    ticket_id: str,
+    payload: MarkFalseAlarmRequest,
+    db: Session = Depends(get_db),
+):
+    """
+    Phase 8 — Supervisor marks a dispatched incident as a false alarm.
+    Sets ticket.false_alarm = True for false_dispatch_rate metric tracking.
+    Only changes the flag; does NOT cancel any dispatch or close the ticket.
+    """
+    ticket = db.get(Ticket, ticket_id)
+    if not ticket:
+        raise HTTPException(404, f"Ticket '{ticket_id}' not found")
+    ticket.false_alarm = True
+    if payload.notes:
+        existing = ticket.resolution_notes or ""
+        ticket.resolution_notes = (
+            f"{existing}\n[FALSE ALARM] {payload.notes}".strip()
+        )
+    db.commit()
+    db.refresh(ticket)
+    return _attach_photo_url(ticket)
 
 
+@router.post("/{ticket_id}/mark-completed-offline", response_model=TicketOut)
+def mark_ticket_completed_offline(
+    ticket_id: str,
+    db: Session = Depends(get_db),
+):
+    """
+    Phase 8 — Mobile client marks that this report was completed without connectivity.
+    Sets ticket.completed_offline = True for pct_reports_completed_offline metric.
+    Called by the mobile app when syncing a queued offline report to the server.
+    """
+    ticket = db.get(Ticket, ticket_id)
+    if not ticket:
+        raise HTTPException(404, f"Ticket '{ticket_id}' not found")
+    ticket.completed_offline = True
+    db.commit()
+    db.refresh(ticket)
+    return _attach_photo_url(ticket)

@@ -231,3 +231,42 @@ export async function getPlantDetails(plantId = "bsl_bokaro") {
   return json(await fetch(`${BASE}/admin/plants/${encodeURIComponent(plantId)}`));
 }
 
+// ── Phase 8: Operational Metrics, False Alarm, Offline Sync ──────────────────
+
+export async function getOperationalMetrics(plantId = "bsl_bokaro", windowDays = null) {
+  const params = new URLSearchParams({ plant_id: plantId });
+  if (windowDays !== null) params.append("window_days", windowDays);
+  return json(await fetch(`${BASE}/analytics/operational-metrics?${params}`));
+}
+
+export async function markTicketFalseAlarm(ticketId, notes = null) {
+  return json(
+    await fetch(`${BASE}/tickets/${ticketId}/mark-false-alarm`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ notes }),
+    })
+  );
+}
+
+export async function markTicketCompletedOffline(ticketId) {
+  return json(
+    await fetch(`${BASE}/tickets/${ticketId}/mark-completed-offline`, { method: "POST" })
+  );
+}
+
+export async function seedDemoData(plantId = "bsl_bokaro") {
+  return json(
+    await fetch(`${BASE}/admin/demo/seed?plant_id=${encodeURIComponent(plantId)}`, {
+      method: "POST",
+    })
+  );
+}
+
+export async function clearDemoData(plantId = "bsl_bokaro") {
+  return json(
+    await fetch(`${BASE}/admin/demo/clear?plant_id=${encodeURIComponent(plantId)}`, {
+      method: "DELETE",
+    })
+  );
+}

@@ -8,6 +8,7 @@
   "emergency_hotline": "+916542280000",
   "control_room_channel": "VHF-CH-04",
   "data_retention_days": 180,
+  "plant_headcount": 25000,
   "intrinsically_safe_required_zones": ["BF1", "GHS", "COB", "SMS2"],
   "emergency_teams": [
     {

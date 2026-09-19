@@ -73,6 +73,9 @@ async def lifespan(app: FastAPI):
             "escalation_level INTEGER DEFAULT 0",
             "escalated_at TIMESTAMP",
             "escalated_to VARCHAR",
+            # Phase 8 operational metrics flags
+            "completed_offline BOOLEAN DEFAULT 0",
+            "false_alarm BOOLEAN DEFAULT 0",
         ]:
             try:
                 conn.execute(text(f"ALTER TABLE tickets ADD COLUMN {col_def};"))

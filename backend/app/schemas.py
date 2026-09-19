@@ -101,6 +101,9 @@ class TicketOut(BaseModel):
     sop_gap_detected: bool = False
     ai_audit_trail: dict[str, Any] | None = None
     model_versions: dict[str, Any] | None = Field(default_factory=dict)
+    # Phase 8: Operational Metrics flags
+    completed_offline: bool = False
+    false_alarm: bool = False
 
     model_config = {"from_attributes": True}
 
@@ -253,3 +256,30 @@ class CultureMetricsOut(BaseModel):
     impact_statement_en: str
     impact_statement_hi: str
 
+
+class OperationalMetricsOut(BaseModel):
+    """Phase 8: Key safety operations metrics. All durations in seconds unless noted."""
+    plant_id: str
+    window_days: int
+    total_tickets: int
+    emergency_tickets: int
+    avg_time_to_first_dispatch_s: float | None
+    avg_time_to_acknowledge_s: float | None
+    avg_near_miss_closure_time_h: float | None
+    avg_transcription_confidence: float | None
+    pct_reports_completed_offline: float | None
+    false_dispatch_rate: float | None
+    reports_per_100_workers_per_month: float | None
+    # raw counts for transparency
+    dispatched_count: int
+    acknowledged_count: int
+    offline_count: int
+    false_alarm_count: int
+    # thresholds (read from config, shown for transparency)
+    ack_sla_seconds: int
+    data_note: str
+
+
+class MarkFalseAlarmRequest(BaseModel):
+    """Supervisor marks a dispatched incident as a false alarm on closure."""
+    notes: str | None = None

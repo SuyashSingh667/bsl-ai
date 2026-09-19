@@ -100,6 +100,10 @@ class Ticket(Base):
 
     model_versions: Mapped[dict] = mapped_column(JSON, default=dict)
 
+    # Phase 8: Operational Metrics flags
+    completed_offline: Mapped[bool] = mapped_column(Boolean, default=False)  # report finished without connectivity
+    false_alarm: Mapped[bool] = mapped_column(Boolean, default=False)  # closure flag: dispatch was a false alarm
+
 
 class AuditLog(Base):
     __tablename__ = "audit_logs"

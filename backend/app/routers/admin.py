@@ -17,7 +17,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import AuditLog
 from app.schemas import AuditLogOut, EmergencyTeamDefinition, PlantZoneDefinition, HazardBandConfigUpdate
-from app.services import audit_logger, plant_manager, sop_parser
+from app.services import audit_logger, demo_mode, plant_manager, sop_parser
 from app.services.rbac import AuthContext, UserRole, get_current_auth, require_role
 from spatial_impact.engine import get_hazard_bands_config, save_hazard_bands_config
 
@@ -227,3 +227,43 @@ def update_spatial_hazard_bands(
     )
     return {"status": "success", "config": updated}
 
+
+# ── Phase 8: Demo / Simulation Mode endpoints ─────────────────────────────────
+
+@router.post("/demo/seed")
+def seed_demo_incidents(
+    plant_id: str = "bsl_bokaro",
+    db: Session = Depends(get_db),
+    auth: AuthContext = Depends(require_role(UserRole.ADMIN)),
+):
+    """
+    Phase 8 — Seeds synthetic scripted incidents for demo/simulation mode.
+    Safe to call multiple times (idempotent). All demo tickets are tagged
+    with employee_id prefixed 'DEMO_WORKER_' so they can be filtered.
+
+    CAUTION: Do not seed on a production instance with live data unless you
+    intend to show demo incidents alongside real data.
+    """
+    created = demo_mode.seed_demo_data(db, plant_id=plant_id)
+    return {
+        "status": "seeded",
+        "plant_id": plant_id,
+        "created_count": len(created),
+        "ticket_ids": created,
+        "note": "Demo data is labelled DEMO_WORKER_* and can be cleared via DELETE /admin/demo/clear",
+    }
+
+
+@router.delete("/demo/clear")
+def clear_demo_incidents(
+    plant_id: str = "bsl_bokaro",
+    db: Session = Depends(get_db),
+    auth: AuthContext = Depends(require_role(UserRole.ADMIN)),
+):
+    """Phase 8 — Removes all demo tickets for the specified plant."""
+    count = demo_mode.clear_demo_data(db, plant_id=plant_id)
+    return {
+        "status": "cleared",
+        "plant_id": plant_id,
+        "removed_count": count,
+    }
