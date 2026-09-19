@@ -14,6 +14,18 @@ def distance(a, b):
     return math.hypot(a["x"] - b["x"], a["y"] - b["y"])
 
 
+def get_hazard_bands_config():
+    return load_json("hazard_bands.json")
+
+
+def save_hazard_bands_config(bands_dict: dict):
+    cfg = load_json("hazard_bands.json")
+    cfg["bands"].update(bands_dict)
+    with open(BASE_DIR / "hazard_bands.json", "w") as f:
+        json.dump(cfg, f, indent=2)
+    return cfg
+
+
 def estimate_impact(incident_zone_id, incident_type, occupancy_period="day", zones=None, hazard_config=None, plant_id=None):
     if zones is None:
         try:
@@ -24,11 +36,19 @@ def estimate_impact(incident_zone_id, incident_type, occupancy_period="day", zon
     hazard_config = hazard_config or load_json("hazard_bands.json")
 
     if incident_type in hazard_config["not_applicable"]:
-        return {"applicable": False, "reason": f"{incident_type} has no spatial impact model"}
+        return {
+            "applicable": False,
+            "footprint_type": "indicative_footprint_unvalidated",
+            "reason": f"{incident_type} has no spatial impact model",
+        }
 
     band = hazard_config["bands"].get(incident_type)
     if band is None:
-        return {"applicable": False, "reason": f"no hazard band configured for '{incident_type}'"}
+        return {
+            "applicable": False,
+            "footprint_type": "indicative_footprint_unvalidated",
+            "reason": f"no hazard band configured for '{incident_type}'",
+        }
 
     zones_by_id = {z["zone_id"]: z for z in zones}
     origin = zones_by_id.get(incident_zone_id)
@@ -78,17 +98,21 @@ def estimate_impact(incident_zone_id, incident_type, occupancy_period="day", zon
 
     return {
         "applicable": True,
-        "model_version": hazard_config["model_version"],
+        "footprint_type": "indicative_footprint_unvalidated",
+        "footprint_label": "Indicative Footprint (Advisory / Unvalidated)",
+        "model_version": hazard_config.get("model_version", "tier1-indicative-v1"),
         "incident_zone": incident_zone_id,
         "incident_type": incident_type,
+        "primary_radius_m": band["primary_m"],
+        "secondary_radius_m": band["secondary_m"],
         "occupancy_period": occupancy_period,
         "affected_zones": affected,
         "estimated_persons_at_risk_range": [round(persons_low), round(persons_high)],
         "civilian_exposure_alert": civilian_alert,
         "disclaimer": (
-            "Model-based triage estimate using static radius bands (Tier 1). "
-            "Not a certified consequence analysis. Requires safety-engineer verification "
-            "before use in official reporting."
+            "Indicative footprint for triage awareness only. Not a certified consequence analysis "
+            "or blast-radius simulation. Requires safety-engineer physical verification before "
+            "use in regulatory or emergency response zoning."
         ),
     }
 

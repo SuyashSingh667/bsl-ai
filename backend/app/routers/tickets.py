@@ -3,15 +3,22 @@ from pathlib import Path
 import shutil
 import uuid
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.config import PHOTO_UPLOAD_DIR
 from app.database import get_db
 from app.models import Ticket
-from app.schemas import ActionAssignRequest, ActionCloseRequest, TicketOut, TicketUpdate
-from app.services import routing, safety_rules, visual_analysis
+from app.schemas import (
+    ActionAssignRequest,
+    ActionCloseRequest,
+    DispatchAckRequest,
+    DispatchOnSiteRequest,
+    TicketOut,
+    TicketUpdate,
+)
+from app.services import integration_dispatcher, pdf_dossier, routing, safety_rules, visual_analysis
 
 router = APIRouter(prefix="/tickets", tags=["tickets"])
 
@@ -315,4 +322,90 @@ def close_corrective_action(
 
 
 close_action = close_corrective_action
+
+
+@router.post("/{ticket_id}/dispatch/ack", response_model=TicketOut)
+def acknowledge_ticket_dispatch(
+    ticket_id: str,
+    payload: DispatchAckRequest,
+    db: Session = Depends(get_db),
+):
+    """
+    Records affirmative emergency team acknowledgment with exact timestamp,
+    cancelling auto-escalation timer.
+    """
+    try:
+        ticket = integration_dispatcher.acknowledge_dispatch(
+            ticket_id=ticket_id,
+            acknowledged_by=payload.acknowledged_by,
+            db=db,
+            notes=payload.notes,
+        )
+        return _attach_photo_url(ticket)
+    except ValueError as exc:
+        raise HTTPException(404, str(exc))
+
+
+@router.post("/{ticket_id}/dispatch/on-site", response_model=TicketOut)
+def mark_ticket_responders_on_site(
+    ticket_id: str,
+    payload: DispatchOnSiteRequest,
+    db: Session = Depends(get_db),
+):
+    """
+    Marks emergency response personnel physically present at the incident zone.
+    """
+    try:
+        ticket = integration_dispatcher.mark_on_site(
+            ticket_id=ticket_id,
+            on_site_by=payload.on_site_by,
+            db=db,
+            notes=payload.notes,
+        )
+        return _attach_photo_url(ticket)
+    except ValueError as exc:
+        raise HTTPException(404, str(exc))
+
+
+@router.post("/dispatch/check-all")
+def check_all_dispatches_for_escalation(
+    ack_timeout_seconds: int = 60,
+    db: Session = Depends(get_db),
+):
+    """
+    Evaluates all active dispatches across the plant. If any unacknowledged dispatch
+    has exceeded the ack_timeout_seconds SLA, it triggers automatic escalation.
+    """
+    escalated = integration_dispatcher.check_and_auto_escalate_overdue_dispatches(
+        db=db,
+        default_ack_timeout_s=ack_timeout_seconds,
+    )
+    return {
+        "status": "completed",
+        "escalated_count": len(escalated),
+        "escalated_incidents": escalated,
+    }
+
+
+@router.get("/{ticket_id}/export/pdf")
+def export_ticket_pdf_dossier(ticket_id: str, db: Session = Depends(get_db)):
+    """
+    Generates and downloads an official, publication-grade PDF incident dossier
+    including universal transcript, original audio link, advisory AI tags, SOP citations,
+    dispatch/ACK/on-site timeline, and SHA-256 audit ledger seal.
+    """
+    ticket = db.get(Ticket, ticket_id)
+    if not ticket:
+        raise HTTPException(404, f"Ticket '{ticket_id}' not found")
+
+    pdf_bytes = pdf_dossier.generate_pdf_dossier(ticket, db)
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="incident_dossier_{ticket_id[:8]}.pdf"',
+        },
+    )
+
+
 

@@ -48,6 +48,16 @@ class TicketOut(BaseModel):
     shift: str | None = None
     anonymous_tracking_code: str | None = None
     lifecycle_stage: str = "received"
+    dispatch_status: str = "pending"
+    dispatched_at: datetime | None = None
+    acknowledged_at: datetime | None = None
+    acknowledged_by: str | None = None
+    on_site_at: datetime | None = None
+    on_site_by: str | None = None
+    ack_deadline: datetime | None = None
+    escalation_level: int = 0
+    escalated_at: datetime | None = None
+    escalated_to: str | None = None
     corrective_action: str | None = None
     assigned_to: str | None = None
     due_date: datetime | None = None
@@ -187,6 +197,20 @@ class ActionAssignRequest(BaseModel):
 class ActionCloseRequest(BaseModel):
     closure_notes: str
     closure_evidence_path: str | None = None
+
+
+class DispatchAckRequest(BaseModel):
+    acknowledged_by: str
+    notes: str | None = None
+
+
+class DispatchOnSiteRequest(BaseModel):
+    on_site_by: str
+    notes: str | None = None
+
+
+class HazardBandConfigUpdate(BaseModel):
+    bands: dict[str, dict[str, Any]]
 
 
 class IncidentTrackerOut(BaseModel):

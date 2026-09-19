@@ -16,9 +16,10 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models import AuditLog
-from app.schemas import AuditLogOut, EmergencyTeamDefinition, PlantZoneDefinition
+from app.schemas import AuditLogOut, EmergencyTeamDefinition, PlantZoneDefinition, HazardBandConfigUpdate
 from app.services import audit_logger, plant_manager, sop_parser
 from app.services.rbac import AuthContext, UserRole, get_current_auth, require_role
+from spatial_impact.engine import get_hazard_bands_config, save_hazard_bands_config
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -198,3 +199,31 @@ def verify_audit_ledger(
         "tampering_detected": not is_valid,
         "error_details": err,
     }
+
+
+@router.get("/spatial/hazard-bands")
+def get_spatial_hazard_bands(
+    auth: AuthContext = Depends(require_role(UserRole.ADMIN, UserRole.SAFETY_OFFICER, UserRole.CONTROL_ROOM)),
+):
+    """Retrieves the current configurable hazard band buffer radii (indicative footprints)."""
+    return get_hazard_bands_config()
+
+
+@router.put("/spatial/hazard-bands")
+def update_spatial_hazard_bands(
+    payload: HazardBandConfigUpdate,
+    db: Session = Depends(get_db),
+    auth: AuthContext = Depends(require_role(UserRole.ADMIN, UserRole.SAFETY_OFFICER)),
+):
+    """Updates hazard band buffer radii per hazard type and records change in the audit ledger."""
+    updated = save_hazard_bands_config(payload.bands)
+    audit_logger.log_event(
+        db=db,
+        action="HAZARD_BANDS_UPDATED",
+        plant_id="all",
+        actor_id=auth.user_id,
+        actor_role=auth.role.value,
+        details={"updated_hazards": list(payload.bands.keys())},
+    )
+    return {"status": "success", "config": updated}
+

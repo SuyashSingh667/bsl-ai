@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import JSON, Boolean, DateTime, Float, String, Text
+from sqlalchemy import JSON, Boolean, DateTime, Float, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -32,9 +32,22 @@ class Ticket(Base):
 
     # Phase 6: Anonymous no-blame reporting and closed-loop lifecycle tracking
     is_anonymous: Mapped[bool] = mapped_column(Boolean, default=False)
-    shift: Mapped[str | None] = mapped_column(String, nullable=True)  # "Shift A", "Shift B", "Shift C", "General"
+    shift: Mapped[str | None] = mapped_column(String, nullable=True)
     anonymous_tracking_code: Mapped[str | None] = mapped_column(String, nullable=True, index=True)
     lifecycle_stage: Mapped[str] = mapped_column(String, default="received")  # "received" | "under_review" | "action_assigned" | "action_taken" | "resolved"
+
+    # Phase 7: Operational Dispatch Lifecycle & Acknowledgment Tracking
+    dispatch_status: Mapped[str] = mapped_column(String, default="pending", index=True)  # "pending" | "dispatched" | "acknowledged" | "on_site" | "closed"
+    dispatched_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    acknowledged_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    acknowledged_by: Mapped[str | None] = mapped_column(String, nullable=True)
+    on_site_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    on_site_by: Mapped[str | None] = mapped_column(String, nullable=True)
+    ack_deadline: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    escalation_level: Mapped[int] = mapped_column(Integer, default=0)
+    escalated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    escalated_to: Mapped[str | None] = mapped_column(String, nullable=True)
+
     corrective_action: Mapped[str | None] = mapped_column(Text, nullable=True)
     assigned_to: Mapped[str | None] = mapped_column(String, nullable=True)
     due_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

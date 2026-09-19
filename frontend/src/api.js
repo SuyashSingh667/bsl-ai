@@ -174,3 +174,60 @@ export async function getCultureMetrics(plantId = "bsl_bokaro") {
 export async function getIncidentTracker(identifier) {
   return json(await fetch(`${BASE}/analytics/tracker/${encodeURIComponent(identifier)}`));
 }
+
+export async function acknowledgeDispatch(ticketId, { acknowledgedBy, notes }) {
+  return json(
+    await fetch(`${BASE}/tickets/${ticketId}/dispatch/ack`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        acknowledged_by: acknowledgedBy,
+        notes: notes || null,
+      }),
+    })
+  );
+}
+
+export async function markOnSite(ticketId, { onSiteBy, notes }) {
+  return json(
+    await fetch(`${BASE}/tickets/${ticketId}/dispatch/on-site`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        on_site_by: onSiteBy,
+        notes: notes || null,
+      }),
+    })
+  );
+}
+
+export async function checkAllDispatches(timeoutSeconds = 60) {
+  return json(
+    await fetch(`${BASE}/tickets/dispatch/check-all?ack_timeout_seconds=${timeoutSeconds}`, {
+      method: "POST",
+    })
+  );
+}
+
+export async function getSpatialHazardBands() {
+  return json(await fetch(`${BASE}/admin/spatial/hazard-bands`));
+}
+
+export async function updateSpatialHazardBands(bands) {
+  return json(
+    await fetch(`${BASE}/admin/spatial/hazard-bands`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ bands }),
+    })
+  );
+}
+
+export function getPdfDossierUrl(ticketId) {
+  return `${BASE}/tickets/${ticketId}/export/pdf`;
+}
+
+export async function getPlantDetails(plantId = "bsl_bokaro") {
+  return json(await fetch(`${BASE}/admin/plants/${encodeURIComponent(plantId)}`));
+}
+

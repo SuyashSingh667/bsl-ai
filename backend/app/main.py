@@ -63,6 +63,16 @@ async def lifespan(app: FastAPI):
             "closure_time_hours FLOAT",
             "closure_evidence_path VARCHAR",
             "closure_notes TEXT",
+            "dispatch_status VARCHAR DEFAULT 'pending'",
+            "dispatched_at TIMESTAMP",
+            "acknowledged_at TIMESTAMP",
+            "acknowledged_by VARCHAR",
+            "on_site_at TIMESTAMP",
+            "on_site_by VARCHAR",
+            "ack_deadline TIMESTAMP",
+            "escalation_level INTEGER DEFAULT 0",
+            "escalated_at TIMESTAMP",
+            "escalated_to VARCHAR",
         ]:
             try:
                 conn.execute(text(f"ALTER TABLE tickets ADD COLUMN {col_def};"))

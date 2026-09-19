@@ -9,7 +9,12 @@ import {
   closeAction,
   getSafetyTrends,
   getCultureMetrics,
+  acknowledgeDispatch,
+  markOnSite,
+  checkAllDispatches,
+  getPdfDossierUrl,
 } from "../api";
+import PlantMap from "./PlantMap";
 
 const TIER_LABELS = {
   emergency_authority: "Emergency Authority",
@@ -41,13 +46,14 @@ const LIFECYCLE_STAGES = [
 ];
 
 export default function Dashboard() {
-  const [dashboardView, setDashboardView] = useState("queue"); // "queue" | "trends" | "culture"
+  const [dashboardView, setDashboardView] = useState("queue"); // "queue" | "map" | "trends" | "culture"
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [filterTier, setFilterTier] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [sortMode, setSortMode] = useState("priority"); // "priority" | "oldest" | "newest"
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [similarData, setSimilarData] = useState(null);
   const [updating, setUpdating] = useState(false);
@@ -55,6 +61,15 @@ export default function Dashboard() {
   const [editTier, setEditTier] = useState("");
   const [editNotes, setEditNotes] = useState("");
   const [saveSuccess, setSaveSuccess] = useState(false);
+
+  // Phase 7: Dispatch ACK & On-Site Responder State
+  const [ackResponder, setAckResponder] = useState("");
+  const [ackNotes, setAckNotes] = useState("");
+  const [onSiteLead, setOnSiteLead] = useState("");
+  const [onSiteNotes, setOnSiteNotes] = useState("");
+  const [dispatchActionLoading, setDispatchActionLoading] = useState(false);
+  const [dispatchActionMsg, setDispatchActionMsg] = useState(null);
+  const [escalationNotice, setEscalationNotice] = useState(null);
 
   // Corrective Action assignment & closure state
   const [assignedTo, setAssignedTo] = useState("");
@@ -125,6 +140,11 @@ export default function Dashboard() {
     setCorrectiveAction(t.corrective_action || "");
     setDueDate(t.due_date ? t.due_date.slice(0, 10) : "");
     setClosureNotes(t.closure_notes || "");
+    setAckResponder(t.acknowledged_by || "");
+    setAckNotes("");
+    setOnSiteLead(t.on_site_by || "");
+    setOnSiteNotes("");
+    setDispatchActionMsg(null);
     setSaveSuccess(false);
     setActionMsg(null);
     setSimilarData(null);
@@ -133,6 +153,67 @@ export default function Dashboard() {
       setSimilarData(sim);
     } catch {
       // similar endpoint non-critical
+    }
+  }
+
+  async function handleAcknowledgeDispatch(e) {
+    e.preventDefault();
+    if (!selectedTicket || !ackResponder.trim()) {
+      alert("Please enter the responder or team name acknowledging receipt.");
+      return;
+    }
+    setDispatchActionLoading(true);
+    setDispatchActionMsg(null);
+    try {
+      const updated = await acknowledgeDispatch(selectedTicket.id, {
+        acknowledgedBy: ackResponder.trim(),
+        notes: ackNotes.trim(),
+      });
+      setSelectedTicket(updated);
+      setDispatchActionMsg(`✓ Dispatch receipt acknowledged by ${updated.acknowledged_by}!`);
+      setTickets((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
+    } catch (err) {
+      alert("Failed to acknowledge dispatch: " + err.message);
+    } finally {
+      setDispatchActionLoading(false);
+    }
+  }
+
+  async function handleMarkOnSite(e) {
+    e.preventDefault();
+    if (!selectedTicket || !onSiteLead.trim()) {
+      alert("Please enter the on-site responder or team lead name.");
+      return;
+    }
+    setDispatchActionLoading(true);
+    setDispatchActionMsg(null);
+    try {
+      const updated = await markOnSite(selectedTicket.id, {
+        onSiteBy: onSiteLead.trim(),
+        notes: onSiteNotes.trim(),
+      });
+      setSelectedTicket(updated);
+      setDispatchActionMsg(`✓ Responders confirmed on-site in Zone ${updated.zone_id}!`);
+      setTickets((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
+    } catch (err) {
+      alert("Failed to mark responders on-site: " + err.message);
+    } finally {
+      setDispatchActionLoading(false);
+    }
+  }
+
+  async function handleCheckEscalations() {
+    try {
+      const res = await checkAllDispatches(60);
+      if (res.escalated_count > 0) {
+        setEscalationNotice(`⚠️ Auto-escalated ${res.escalated_count} unacknowledged dispatch(es) to secondary emergency authorities!`);
+        loadTickets();
+      } else {
+        setEscalationNotice("✓ All dispatches acknowledged within SLA.");
+        setTimeout(() => setEscalationNotice(null), 4000);
+      }
+    } catch (err) {
+      console.warn("Escalation check error:", err);
     }
   }
 
@@ -217,11 +298,38 @@ export default function Dashboard() {
     );
   });
 
+  const sortedTickets = [...filteredTickets].sort((a, b) => {
+    if (sortMode === "priority") {
+      // 1. Emergency Primacy
+      const aEmerg = a.report_type === "emergency" || a.routing_tier === "emergency_authority" ? 1 : 0;
+      const bEmerg = b.report_type === "emergency" || b.routing_tier === "emergency_authority" ? 1 : 0;
+      if (aEmerg !== bEmerg) return bEmerg - aEmerg;
+
+      // 2. Risk Score
+      const aRisk = a.risk_score != null ? a.risk_score : 0;
+      const bRisk = b.risk_score != null ? b.risk_score : 0;
+      if (Math.abs(bRisk - aRisk) > 0.05) return bRisk - aRisk;
+
+      // 3. Dispatch Status urgency
+      const statusWeights = { dispatched: 5, acknowledged: 4, pending: 3, on_site: 2, closed: 1 };
+      const aWeight = statusWeights[a.dispatch_status] || 0;
+      const bWeight = statusWeights[b.dispatch_status] || 0;
+      if (aWeight !== bWeight) return bWeight - aWeight;
+
+      // 4. Age (oldest first for unhandled)
+      return new Date(a.created_at) - new Date(b.created_at);
+    } else if (sortMode === "oldest") {
+      return new Date(a.created_at) - new Date(b.created_at);
+    } else {
+      return new Date(b.created_at) - new Date(a.created_at);
+    }
+  });
+
   const emergencyCount = tickets.filter(
     (t) => t.report_type === "emergency" || t.routing_tier === "emergency_authority"
   ).length;
   const highRiskCount = tickets.filter((t) => (t.risk_score || 0) >= 0.7).length;
-  const inProgressCount = tickets.filter((t) => t.status === "in_progress").length;
+  const inProgressCount = tickets.filter((t) => t.status === "in_progress" || t.dispatch_status === "dispatched").length;
   const openCount = tickets.filter((t) => t.status === "open").length;
 
   return (
@@ -232,11 +340,39 @@ export default function Dashboard() {
           <p className="subtitle">Real-time incident triage, spatial verification & decision support</p>
         </div>
         <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+          <button
+            className="refresh-btn"
+            style={{ background: "#f59e0b", color: "#070d18", fontWeight: "800" }}
+            onClick={handleCheckEscalations}
+            title="Evaluate SLA deadlines and auto-escalate unacknowledged dispatches"
+          >
+            ⚡ Check SLA Escalations
+          </button>
           <button className="refresh-btn" onClick={loadTickets} disabled={loading}>
             🔄 {loading ? "Refreshing..." : "Refresh Queue"}
           </button>
         </div>
       </div>
+
+      {/* Escalation SLA Notification Banner */}
+      {escalationNotice && (
+        <div style={{
+          background: escalationNotice.startsWith("⚠️") ? "rgba(239, 68, 68, 0.15)" : "rgba(16, 185, 129, 0.15)",
+          border: `1px solid ${escalationNotice.startsWith("⚠️") ? "#ef4444" : "#10b981"}`,
+          color: escalationNotice.startsWith("⚠️") ? "#fca5a5" : "#34d399",
+          padding: "10px 16px",
+          borderRadius: "8px",
+          marginBottom: "1rem",
+          fontWeight: "700",
+          fontSize: "0.85rem",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}>
+          <span>{escalationNotice}</span>
+          <button onClick={() => setEscalationNotice(null)} style={{ background: "transparent", border: "none", color: "inherit", cursor: "pointer", fontWeight: "bold" }}>✕</button>
+        </div>
+      )}
 
       {/* View Switcher Sub-Navigation */}
       <div style={{ display: "flex", gap: "10px", marginBottom: "1.25rem", borderBottom: "1px solid #334155", paddingBottom: "10px" }}>
@@ -254,6 +390,21 @@ export default function Dashboard() {
           onClick={() => setDashboardView("queue")}
         >
           📋 Incident Triage Queue ({tickets.length})
+        </button>
+        <button
+          style={{
+            padding: "8px 16px",
+            borderRadius: "8px",
+            border: "none",
+            cursor: "pointer",
+            fontWeight: "700",
+            fontSize: "0.85rem",
+            background: dashboardView === "map" ? "#38bdf8" : "#1e293b",
+            color: dashboardView === "map" ? "#070d18" : "#cbd5e1",
+          }}
+          onClick={() => setDashboardView("map")}
+        >
+          🗺️ Plant Layout & Zones
         </button>
         <button
           style={{
@@ -306,12 +457,21 @@ export default function Dashboard() {
             </div>
             <div className="metric-card active">
               <div className="metric-value">{openCount + inProgressCount}</div>
-              <div className="metric-label">Open / In Progress</div>
+              <div className="metric-label">Active Response</div>
             </div>
           </div>
 
-          {/* Filters Bar */}
-          <div className="filters-bar">
+          {/* Filters & Sorting Bar */}
+          <div className="filters-bar" style={{ display: "flex", flexWrap: "wrap", gap: "10px", alignItems: "center" }}>
+            <div className="filter-group">
+              <label>Sort By:</label>
+              <select value={sortMode} onChange={(e) => setSortMode(e.target.value)} style={{ fontWeight: "700", color: "#38bdf8" }}>
+                <option value="priority">🔥 Priority & Urgency First</option>
+                <option value="oldest">⏱️ Longest Awaiting Response</option>
+                <option value="newest">🆕 Newest First</option>
+              </select>
+            </div>
+
             <div className="filter-group">
               <label>Status:</label>
               <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
@@ -334,7 +494,7 @@ export default function Dashboard() {
               </select>
             </div>
 
-            <div className="filter-group search-group">
+            <div className="filter-group search-group" style={{ flex: 1, minWidth: "220px" }}>
               <input
                 type="text"
                 placeholder="Search ID, Zone, Category, Text, Tracking Code..."
@@ -356,31 +516,85 @@ export default function Dashboard() {
                   <th>Type / Mode</th>
                   <th>Category</th>
                   <th>Zone / Shift</th>
-                  <th>Risk Score</th>
-                  <th>Routing Tier</th>
-                  <th>Stage / Status</th>
+                  <th>Severity</th>
+                  <th>Dispatch Status & ACK</th>
                   <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredTickets.length === 0 ? (
+                {sortedTickets.length === 0 ? (
                   <tr>
-                    <td colSpan="9" style={{ textAlign: "center", padding: "2rem", color: "#888" }}>
+                    <td colSpan="8" style={{ textAlign: "center", padding: "2rem", color: "#888" }}>
                       {loading ? "Loading incidents..." : "No incidents found matching current filters."}
                     </td>
                   </tr>
                 ) : (
-                  filteredTickets.map((t) => {
+                  sortedTickets.map((t) => {
                     const isEmerg = t.report_type === "emergency" || t.routing_tier === "emergency_authority";
                     const risk = t.risk_score != null ? t.risk_score : 0;
                     let riskClass = "risk-low";
                     if (risk >= 0.7) riskClass = "risk-high";
                     else if (risk >= 0.4) riskClass = "risk-med";
 
+                    // One-Glance Dispatch Status calculation
+                    const dStatus = t.dispatch_status || "pending";
+                    let dispatchBadge = (
+                      <span className="status-pill" style={{ background: "#334155", color: "#94a3b8" }}>
+                        ⏳ Pending
+                      </span>
+                    );
+
+                    if (dStatus === "dispatched") {
+                      dispatchBadge = (
+                        <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                          <span className="status-pill status-escalated" style={{ animation: "pulse 2s infinite" }}>
+                            🚨 DISPATCHED
+                          </span>
+                          {t.escalation_level > 0 && (
+                            <span style={{ fontSize: "0.68rem", color: "#f87171", fontWeight: "800" }}>
+                              ⚠️ Escalated (L{t.escalation_level})
+                            </span>
+                          )}
+                        </div>
+                      );
+                    } else if (dStatus === "acknowledged") {
+                      dispatchBadge = (
+                        <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                          <span className="status-pill" style={{ background: "rgba(14, 165, 233, 0.2)", color: "#38bdf8", border: "1px solid #0ea5e9" }}>
+                            ✓ ACKNOWLEDGED
+                          </span>
+                          {t.acknowledged_by && (
+                            <span style={{ fontSize: "0.68rem", color: "#bae6fd" }}>
+                              by {t.acknowledged_by}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    } else if (dStatus === "on_site") {
+                      dispatchBadge = (
+                        <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                          <span className="status-pill" style={{ background: "rgba(16, 185, 129, 0.2)", color: "#34d399", border: "1px solid #10b981" }}>
+                            🚒 ON-SITE
+                          </span>
+                          {t.on_site_by && (
+                            <span style={{ fontSize: "0.68rem", color: "#a7f3d0" }}>
+                              Lead: {t.on_site_by}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    } else if (dStatus === "closed" || t.status === "resolved") {
+                      dispatchBadge = (
+                        <span className="status-pill status-resolved">
+                          ✅ RESOLVED
+                        </span>
+                      );
+                    }
+
                     return (
                       <tr key={t.id} className={isEmerg ? "row-emergency" : ""}>
                         <td className="ticket-id-cell">
-                          {t.id}
+                          {t.id.slice(0, 8)}
                           {t.anonymous_tracking_code && (
                             <div style={{ fontSize: "0.72rem", color: "#a78bfa", fontWeight: "700" }}>
                               {t.anonymous_tracking_code}
@@ -422,27 +636,34 @@ export default function Dashboard() {
                           </div>
                         </td>
                         <td>
-                          <div>{t.zone_id || "—"}</div>
+                          <div><strong>{t.zone_id || "—"}</strong></div>
                           {t.shift && <div style={{ fontSize: "0.72rem", color: "#94a3b8" }}>{t.shift}</div>}
                         </td>
                         <td>
-                          <span className={`risk-pill ${riskClass}`}>{t.risk_score != null ? t.risk_score : "—"}</span>
-                        </td>
-                        <td className="tier-cell">{TIER_LABELS[t.routing_tier] || t.routing_tier || "—"}</td>
-                        <td>
-                          <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
-                            <span className={`status-pill status-${t.status}`}>{t.status}</span>
-                            {t.lifecycle_stage && (
-                              <span style={{ fontSize: "0.7rem", color: "#38bdf8", fontWeight: "600" }}>
-                                {t.lifecycle_stage.replace(/_/g, " ")}
-                              </span>
-                            )}
+                          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                            <span className={`risk-pill ${riskClass}`}>{t.risk_score != null ? t.risk_score : "—"}</span>
+                            <span style={{ fontSize: "0.65rem", color: "#94a3b8" }}>ADVISORY</span>
                           </div>
                         </td>
                         <td>
-                          <button className="inspect-btn" onClick={() => handleSelectTicket(t)}>
-                            Inspect
-                          </button>
+                          {dispatchBadge}
+                        </td>
+                        <td>
+                          <div style={{ display: "flex", gap: "4px" }}>
+                            <button className="inspect-btn" onClick={() => handleSelectTicket(t)} title="Inspect incident details">
+                              Inspect
+                            </button>
+                            <a
+                              href={getPdfDossierUrl(t.id)}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inspect-btn"
+                              style={{ background: "#0f172a", border: "1px solid #334155", color: "#e2e8f0", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "3px", padding: "4px 8px" }}
+                              title="Download official PDF incident dossier"
+                            >
+                              📄 PDF
+                            </a>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -454,7 +675,14 @@ export default function Dashboard() {
         </>
       )}
 
-      {/* VIEW 2: SAFETY TRENDS & HOTSPOTS */}
+      {/* VIEW 2: FULL PLANT MAP VIEW */}
+      {dashboardView === "map" && (
+        <div style={{ marginTop: "1rem" }}>
+          <PlantMap plantId="bsl_bokaro" />
+        </div>
+      )}
+
+      {/* VIEW 3: SAFETY TRENDS & HOTSPOTS */}
       {dashboardView === "trends" && (
         <div style={{ color: "#f8fafc" }}>
           {trendsLoading ? (
@@ -649,6 +877,133 @@ export default function Dashboard() {
             </div>
 
             <div className="modal-body">
+              {/* Official Action Bar: PDF Dossier Export */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "#0b1329", border: "1px solid #1e293b", borderRadius: "8px", padding: "10px 14px", marginBottom: "1rem" }}>
+                <div>
+                  <span style={{ fontSize: "0.85rem", fontWeight: "700", color: "#f8fafc" }}>
+                    📄 Heavy Industrial Safety Incident Dossier
+                  </span>
+                  <p style={{ margin: "2px 0 0 0", fontSize: "0.75rem", color: "#94a3b8" }}>
+                    Includes universal transcript, audio link, advisory AI tags, SOP citations, dispatch timeline & SHA-256 seal.
+                  </p>
+                </div>
+                <a
+                  href={getPdfDossierUrl(selectedTicket.id)}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{
+                    background: "linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)",
+                    color: "#ffffff",
+                    fontWeight: "800",
+                    fontSize: "0.85rem",
+                    padding: "8px 16px",
+                    borderRadius: "6px",
+                    textDecoration: "none",
+                    boxShadow: "0 2px 8px rgba(37,99,235,0.3)",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                  }}
+                >
+                  <span>📥 Download Official PDF Dossier</span>
+                </a>
+              </div>
+
+              {/* Emergency Dispatch, Acknowledgment & On-Site Response Tracking Card */}
+              <div style={{ background: "#0f172a", border: "1.5px solid #334155", borderRadius: "10px", padding: "1rem", marginBottom: "1rem" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                  <h4 style={{ margin: 0, color: "#38bdf8", fontSize: "0.95rem" }}>
+                    🚨 Emergency Dispatch & Response Tracking
+                  </h4>
+                  <span style={{
+                    fontSize: "0.75rem",
+                    fontWeight: "800",
+                    padding: "3px 10px",
+                    borderRadius: "6px",
+                    background: selectedTicket.dispatch_status === "dispatched" ? "rgba(239, 68, 68, 0.2)" : selectedTicket.dispatch_status === "acknowledged" ? "rgba(14, 165, 233, 0.2)" : selectedTicket.dispatch_status === "on_site" ? "rgba(16, 185, 129, 0.2)" : "rgba(100, 116, 139, 0.2)",
+                    color: selectedTicket.dispatch_status === "dispatched" ? "#f87171" : selectedTicket.dispatch_status === "acknowledged" ? "#38bdf8" : selectedTicket.dispatch_status === "on_site" ? "#34d399" : "#94a3b8",
+                    border: `1px solid ${selectedTicket.dispatch_status === "dispatched" ? "#ef4444" : selectedTicket.dispatch_status === "acknowledged" ? "#0ea5e9" : selectedTicket.dispatch_status === "on_site" ? "#10b981" : "#475569"}`,
+                  }}>
+                    STATUS: {selectedTicket.dispatch_status ? selectedTicket.dispatch_status.toUpperCase() : "PENDING"}
+                  </span>
+                </div>
+
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "8px", fontSize: "0.8rem", color: "#94a3b8", background: "#090d16", padding: "10px", borderRadius: "6px", border: "1px solid #1e293b", marginBottom: "10px" }}>
+                  <div>
+                    <span style={{ color: "#64748b", display: "block", fontSize: "0.7rem", textTransform: "uppercase" }}>Dispatched At</span>
+                    <strong style={{ color: "#f8fafc" }}>{selectedTicket.dispatched_at ? new Date(selectedTicket.dispatched_at).toLocaleTimeString() : "Pending"}</strong>
+                  </div>
+                  <div>
+                    <span style={{ color: "#64748b", display: "block", fontSize: "0.7rem", textTransform: "uppercase" }}>ACK Received</span>
+                    <strong style={{ color: selectedTicket.acknowledged_at ? "#38bdf8" : "#f59e0b" }}>
+                      {selectedTicket.acknowledged_at ? `${new Date(selectedTicket.acknowledged_at).toLocaleTimeString()} (${selectedTicket.acknowledged_by || "Team"})` : "Awaiting ACK"}
+                    </strong>
+                  </div>
+                  <div>
+                    <span style={{ color: "#64748b", display: "block", fontSize: "0.7rem", textTransform: "uppercase" }}>Responders On-Site</span>
+                    <strong style={{ color: selectedTicket.on_site_at ? "#34d399" : "#64748b" }}>
+                      {selectedTicket.on_site_at ? `${new Date(selectedTicket.on_site_at).toLocaleTimeString()} (${selectedTicket.on_site_by || "Lead"})` : "Not Arrived"}
+                    </strong>
+                  </div>
+                  <div>
+                    <span style={{ color: "#64748b", display: "block", fontSize: "0.7rem", textTransform: "uppercase" }}>Escalation Level</span>
+                    <strong style={{ color: selectedTicket.escalation_level > 0 ? "#ef4444" : "#94a3b8" }}>
+                      {selectedTicket.escalation_level > 0 ? `Level ${selectedTicket.escalation_level} (Overdue)` : "Normal"}
+                    </strong>
+                  </div>
+                </div>
+
+                {/* Dispatch Action Form: ACK receipt if dispatched */}
+                {selectedTicket.dispatch_status === "dispatched" && (
+                  <form onSubmit={handleAcknowledgeDispatch} style={{ background: "rgba(14, 165, 233, 0.08)", border: "1px solid #0ea5e9", borderRadius: "6px", padding: "10px", marginTop: "8px" }}>
+                    <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                      <input
+                        type="text"
+                        placeholder="Responder Name / Unit (e.g. Officer Raman / Fire Unit 2)"
+                        value={ackResponder}
+                        onChange={(e) => setAckResponder(e.target.value)}
+                        style={{ flex: 1, padding: "8px", background: "#070d18", border: "1px solid #334155", borderRadius: "6px", color: "#fff", fontSize: "0.85rem" }}
+                      />
+                      <button
+                        type="submit"
+                        disabled={dispatchActionLoading}
+                        style={{ background: "#0ea5e9", color: "#070d18", fontWeight: "800", padding: "8px 16px", borderRadius: "6px", border: "none", cursor: "pointer", whiteSpace: "nowrap" }}
+                      >
+                        {dispatchActionLoading ? "Submitting..." : "✅ Acknowledge Receipt"}
+                      </button>
+                    </div>
+                  </form>
+                )}
+
+                {/* Dispatch Action Form: Mark On-Site if acknowledged */}
+                {selectedTicket.dispatch_status === "acknowledged" && (
+                  <form onSubmit={handleMarkOnSite} style={{ background: "rgba(16, 185, 129, 0.08)", border: "1px solid #10b981", borderRadius: "6px", padding: "10px", marginTop: "8px" }}>
+                    <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                      <input
+                        type="text"
+                        placeholder="On-Site Lead Name (e.g. Lead Engineer Mukherjee)"
+                        value={onSiteLead}
+                        onChange={(e) => setOnSiteLead(e.target.value)}
+                        style={{ flex: 1, padding: "8px", background: "#070d18", border: "1px solid #334155", borderRadius: "6px", color: "#fff", fontSize: "0.85rem" }}
+                      />
+                      <button
+                        type="submit"
+                        disabled={dispatchActionLoading}
+                        style={{ background: "#10b981", color: "#070d18", fontWeight: "800", padding: "8px 16px", borderRadius: "6px", border: "none", cursor: "pointer", whiteSpace: "nowrap" }}
+                      >
+                        {dispatchActionLoading ? "Submitting..." : "🚒 Mark Responders On-Site"}
+                      </button>
+                    </div>
+                  </form>
+                )}
+
+                {dispatchActionMsg && (
+                  <div style={{ marginTop: "8px", color: "#38bdf8", fontSize: "0.85rem", fontWeight: "700" }}>
+                    {dispatchActionMsg}
+                  </div>
+                )}
+              </div>
+
               {/* Lifecycle Stage Progress Bar */}
               <div style={{ background: "#070d18", border: "1px solid #1e293b", borderRadius: "10px", padding: "10px 14px", marginBottom: "1rem" }}>
                 <div style={{ fontSize: "0.75rem", fontWeight: "700", color: "#94a3b8", textTransform: "uppercase", marginBottom: "8px" }}>
@@ -870,6 +1225,15 @@ export default function Dashboard() {
                 ) : (
                   <p style={{ color: "#94a3b8", fontSize: "12px" }}>Calculated Statutory Score: <strong>{selectedTicket.risk_score || "0.75"}</strong></p>
                 )}
+              </div>
+
+              {/* Phase 7: Indicative Spatial Footprint & Simple Plant Map (Advisory) */}
+              <div className="inspector-section" style={{ marginTop: "1rem" }}>
+                <PlantMap
+                  incidentZoneId={selectedTicket.zone_id}
+                  impactAssessment={selectedTicket.impact_assessment}
+                  plantId={selectedTicket.plant_id || "bsl_bokaro"}
+                />
               </div>
 
               {/* Phase 6: Supervisor & Safety Officer Corrective Action Workflow */}
