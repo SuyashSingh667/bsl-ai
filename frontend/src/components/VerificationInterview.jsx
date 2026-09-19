@@ -367,7 +367,7 @@ export default function VerificationInterview({ ticketId, onComplete, onRetry })
                   }
                 }}
               >
-                🎙️ Speak Answer Directly →
+                Speak Answer Directly →
               </button>
             </div>
           )}
@@ -376,7 +376,12 @@ export default function VerificationInterview({ ticketId, onComplete, onRetry })
           {isAudioSpeaking && !useText && (
             <div className="audio-speaking-banner">
               <div className="speaking-text-group">
-                <span className="speaking-icon">🔊</span>
+                <span className="speaking-icon" aria-hidden="true">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                    <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                  </svg>
+                </span>
                 <span>
                   Asking question... (Microphone will automatically start when speaking completes)
                 </span>
@@ -395,7 +400,7 @@ export default function VerificationInterview({ ticketId, onComplete, onRetry })
           {question.options?.length > 0 && (
             <div className="quick-options-container">
               <span className="quick-options-label">
-                ⚡ Quick Answer Options (or speak below in your language):
+                Quick Answer Options (or speak below in your language):
               </span>
               <div className="quick-options-grid">
                 {question.options.map((opt, i) => (
@@ -426,7 +431,7 @@ export default function VerificationInterview({ ticketId, onComplete, onRetry })
               <div className="live-mic-badge">
                 <span className="live-dot"></span>
                 <span>
-                  🔴 Microphone LIVE — speak your answer in your language, then tap Stop below
+                  Microphone Live — speak your answer in your language, then tap Stop below
                 </span>
               </div>
               <button
@@ -435,7 +440,7 @@ export default function VerificationInterview({ ticketId, onComplete, onRetry })
                 onClick={handleDone}
                 disabled={submitting}
               >
-                ⏹ Stop Recording & Submit Answer
+                Stop Recording & Submit Answer
               </button>
               <button
                 type="button"
@@ -466,7 +471,7 @@ export default function VerificationInterview({ ticketId, onComplete, onRetry })
                       }}
                       disabled={submitting}
                     >
-                      🎙 Record Answer
+                      Record Answer
                     </button>
                   )}
                   <button
@@ -528,7 +533,7 @@ export default function VerificationInterview({ ticketId, onComplete, onRetry })
             onClick={handleFinishEarly}
             disabled={submitting || isRecording}
           >
-            ✓ Complete & Generate Report Now
+            Complete & Generate Report Now
           </button>
         )}
       </div>

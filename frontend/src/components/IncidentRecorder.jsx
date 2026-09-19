@@ -107,23 +107,35 @@ export default function IncidentRecorder({ reportType, onCreated }) {
 
       {/* Main Intake Card */}
       <div className="intake-main-card">
-        {/* Mode Switcher Tabs */}
-        <div className="intake-mode-switcher">
+        {/* Mode Switcher Tabs - Apple Segmented Control */}
+        <div className="intake-mode-switcher" role="tablist">
           <button
             type="button"
+            role="tab"
+            aria-selected={!useText}
             className={`mode-tab ${!useText ? "active" : ""}`}
             onClick={() => setUseText(false)}
             disabled={submitting}
           >
-            🎙️ Voice Recording (Any Language)
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+              <line x1="12" y1="19" x2="12" y2="22" />
+            </svg>
+            <span>Voice Recording (Any Language)</span>
           </button>
           <button
             type="button"
+            role="tab"
+            aria-selected={useText}
             className={`mode-tab ${useText ? "active" : ""}`}
             onClick={() => setUseText(true)}
             disabled={submitting || isRecording}
           >
-            ✍️ Type Incident Text
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+            </svg>
+            <span>Type Incident Text</span>
           </button>
         </div>
 
@@ -139,14 +151,26 @@ export default function IncidentRecorder({ reportType, onCreated }) {
                   disabled={submitting}
                 >
                   <div className="mic-pulse-ring"></div>
-                  <span className="hero-mic-icon">🎙️</span>
+                  <span className="hero-mic-icon" aria-hidden="true">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+                      <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                      <line x1="12" y1="19" x2="12" y2="22" />
+                    </svg>
+                  </span>
                   <span className="hero-mic-title">Tap to Speak</span>
                   <span className="hero-mic-sub">Universal Voice Recognition</span>
                 </button>
 
                 <div className="supported-languages-box">
                   <div className="lang-box-header">
-                    <span className="globe-icon">🌐</span>
+                    <span className="globe-icon" aria-hidden="true">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="10" />
+                        <line x1="2" y1="12" x2="22" y2="12" />
+                        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+                      </svg>
+                    </span>
                     <span>Speak naturally in any Indian language or English:</span>
                   </div>
                   <div className="lang-chip-wrap">
@@ -183,7 +207,7 @@ export default function IncidentRecorder({ reportType, onCreated }) {
                   onClick={handleDone}
                   disabled={submitting}
                 >
-                  ⏹ Done Speaking (Analyze Incident)
+                  Done Speaking (Analyze Incident)
                 </button>
               </div>
             )}
