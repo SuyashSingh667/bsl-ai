@@ -104,6 +104,8 @@ class TicketOut(BaseModel):
     # Phase 8: Operational Metrics flags
     completed_offline: bool = False
     false_alarm: bool = False
+    # RAG Phase 5 feedback
+    question_ratings: list[dict[str, Any]] = Field(default_factory=list)
 
     model_config = {"from_attributes": True}
 
@@ -283,3 +285,12 @@ class OperationalMetricsOut(BaseModel):
 class MarkFalseAlarmRequest(BaseModel):
     """Supervisor marks a dispatched incident as a false alarm on closure."""
     notes: str | None = None
+
+
+class QuestionRatingRequest(BaseModel):
+    """Phase 5: Safety Officer rating on an adaptive verification question."""
+    question_text: str
+    target_slot: str | None = None
+    rating: str  # "useful" | "not_useful" | "irrelevant" | "missing_question"
+    feedback_notes: str | None = None
+    officer_id: str | None = "SAFETY_OFFICER"

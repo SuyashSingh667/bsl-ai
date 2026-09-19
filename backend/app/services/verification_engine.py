@@ -52,20 +52,25 @@ def next_question(
     prior_q = prior_questions or []
     prior_a = prior_answers_en or []
 
-    # 1. Attempt RAG-grounded adaptive personalized question first
+    # 1. Attempt RAG-grounded adaptive personalized question via interview_state engine
     if incident_description_en or raw_description or prior_q:
-        rag_result = rag_interview.generate_rag_question(
-            category=category,
-            incident_description_en=incident_description_en,
-            prior_questions=prior_q,
-            prior_answers_en=prior_a,
+        from app.services import interview_state
+
+        state = interview_state.InterviewState(
+            hazard_type=category,
             zone_id=zone_id,
             language=language,
-            raw_description=raw_description,
+            initial_report=incident_description_en or raw_description,
         )
-        if rag_result is not None:
-            q_text, opts, sop_source, is_personalized = rag_result
+
+        # Replay prior answered turns to populate filled slots
+        for q, a in zip(prior_q, prior_a):
+            state.record_turn(q, a)
+
+        q_text, opts, sop_source, is_personalized, target_slot = interview_state.generate_next_best_question(state)
+        if q_text is not None:
             return q_text, answered_count, opts, sop_source, is_personalized
+
         if answered_count >= 4:
             return None, answered_count, [], None, False
 

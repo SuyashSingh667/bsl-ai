@@ -16,6 +16,7 @@ from app.schemas import (
     DispatchAckRequest,
     DispatchOnSiteRequest,
     MarkFalseAlarmRequest,
+    QuestionRatingRequest,
     TicketOut,
     TicketUpdate,
 )
@@ -450,3 +451,89 @@ def mark_ticket_completed_offline(
     db.commit()
     db.refresh(ticket)
     return _attach_photo_url(ticket)
+
+
+@router.post("/{ticket_id}/rate-question", response_model=TicketOut)
+def rate_verification_question(
+    ticket_id: str,
+    payload: QuestionRatingRequest,
+    db: Session = Depends(get_db),
+):
+    """
+    Phase 5 — Safety Officer feedback on verification question relevance.
+    Logs feedback in ticket.question_ratings and emits immutable audit log.
+    """
+    ticket = db.get(Ticket, ticket_id)
+    if not ticket:
+        raise HTTPException(404, f"Ticket '{ticket_id}' not found")
+
+    new_rating = {
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "officer_id": payload.officer_id or "SAFETY_OFFICER",
+        "question_text": payload.question_text,
+        "target_slot": payload.target_slot,
+        "rating": payload.rating,
+        "feedback_notes": payload.feedback_notes,
+    }
+
+    current_ratings = list(ticket.question_ratings or [])
+    current_ratings.append(new_rating)
+    ticket.question_ratings = current_ratings
+
+    db.commit()
+    db.refresh(ticket)
+
+    try:
+        from app.services import audit_logger
+        audit_logger.log_event(
+            db=db,
+            action="QUESTION_RATING_SUBMITTED",
+            plant_id=ticket.plant_id,
+            ticket_id=ticket.id,
+            actor_id=payload.officer_id or "SAFETY_OFFICER",
+            actor_role="safety_officer",
+            details=new_rating,
+        )
+    except Exception:
+        pass
+
+    return _attach_photo_url(ticket)
+
+
+@router.get("/export/rated-questions")
+def export_rated_questions(
+    plant_id: str | None = None,
+    db: Session = Depends(get_db),
+):
+    """
+    Phase 5 — Export rated verification questions as training/eval dataset.
+    """
+    query = select(Ticket)
+    if plant_id:
+        query = query.where(Ticket.plant_id == plant_id)
+    tickets = db.scalars(query).all()
+
+    dataset = []
+    for t in tickets:
+        ratings = t.question_ratings or []
+        for r in ratings:
+            dataset.append({
+                "ticket_id": t.id,
+                "plant_id": t.plant_id,
+                "hazard_type": t.predicted_category,
+                "initial_report": t.incident_description,
+                "question_text": r.get("question_text"),
+                "target_slot": r.get("target_slot"),
+                "rating": r.get("rating"),
+                "feedback_notes": r.get("feedback_notes"),
+                "officer_id": r.get("officer_id"),
+                "rated_at": r.get("timestamp"),
+            })
+
+    return {
+        "plant_id": plant_id or "all",
+        "total_rated_samples": len(dataset),
+        "exported_at": datetime.now(timezone.utc).isoformat(),
+        "samples": dataset,
+    }
+

@@ -76,6 +76,8 @@ async def lifespan(app: FastAPI):
             # Phase 8 operational metrics flags
             "completed_offline BOOLEAN DEFAULT 0",
             "false_alarm BOOLEAN DEFAULT 0",
+            # RAG Phase 5 feedback
+            "question_ratings JSON DEFAULT '[]'",
         ]:
             try:
                 conn.execute(text(f"ALTER TABLE tickets ADD COLUMN {col_def};"))

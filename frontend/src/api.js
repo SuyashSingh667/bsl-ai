@@ -270,3 +270,26 @@ export async function clearDemoData(plantId = "bsl_bokaro") {
     })
   );
 }
+
+// ── Phase 5: RAG Question Rating & Feedback ──────────────────────────────────
+
+export async function rateVerificationQuestion(ticketId, { questionText, targetSlot, rating, feedbackNotes, officerId }) {
+  return json(
+    await fetch(`${BASE}/tickets/${ticketId}/rate-question`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        question_text: questionText,
+        target_slot: targetSlot || null,
+        rating: rating,
+        feedback_notes: feedbackNotes || null,
+        officer_id: officerId || "SAFETY_OFFICER",
+      }),
+    })
+  );
+}
+
+export async function exportRatedQuestions(plantId = "bsl_bokaro") {
+  return json(await fetch(`${BASE}/tickets/export/rated-questions?plant_id=${encodeURIComponent(plantId)}`));
+}
+

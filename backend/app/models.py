@@ -104,6 +104,9 @@ class Ticket(Base):
     completed_offline: Mapped[bool] = mapped_column(Boolean, default=False)  # report finished without connectivity
     false_alarm: Mapped[bool] = mapped_column(Boolean, default=False)  # closure flag: dispatch was a false alarm
 
+    # RAG Phase 5: Safety Officer Question Feedback
+    question_ratings: Mapped[list] = mapped_column(JSON, default=list)
+
 
 class AuditLog(Base):
     __tablename__ = "audit_logs"
