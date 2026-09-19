@@ -248,8 +248,8 @@ export const IncidentRecorderScreen: React.FC<IncidentRecorderScreenProps> = ({
 
           {/* English Operational Translation */}
           {transcribedTicket.incident_description_en && (
-            <View style={[styles.transcriptBox, { borderColor: '#38bdf8' }]}>
-              <Text style={[styles.boxLabel, { color: '#38bdf8' }]}>ENGLISH OPERATIONAL TRANSLATION:</Text>
+            <View style={styles.transcriptBox}>
+              <Text style={styles.boxLabel}>ENGLISH OPERATIONAL TRANSLATION:</Text>
               <Text style={styles.transcriptTextEn}>
                 "{transcribedTicket.incident_description_en}"
               </Text>
@@ -301,7 +301,7 @@ export const IncidentRecorderScreen: React.FC<IncidentRecorderScreenProps> = ({
                   : 'SHARED KIOSK TERMINAL'}
               </Text>
               <Text style={styles.kioskSub}>
-                Worker Badge: <Text style={{ color: '#38bdf8', fontWeight: '800' }}>{kioskSession.workerBadgeId}</Text> • Station: {kioskSession.kioskStationId}
+                Worker Badge: <Text style={{ color: '#ffffff', fontWeight: '800' }}>{kioskSession.workerBadgeId}</Text> • Station: {kioskSession.kioskStationId}
               </Text>
             </View>
           </View>
@@ -456,7 +456,7 @@ export const IncidentRecorderScreen: React.FC<IncidentRecorderScreenProps> = ({
         {/* Loading Spinner */}
         {isLoading && (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#38bdf8" />
+            <ActivityIndicator size="large" color="#ffffff" />
             <Text style={styles.loadingText}>{statusMessage}</Text>
           </View>
         )}
@@ -479,7 +479,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#1c1c1e',
     borderWidth: 1,
-    borderColor: 'rgba(10, 132, 255, 0.3)',
+    borderColor: 'rgba(255, 255, 255, 0.1)',
     padding: 12,
     borderRadius: 16,
     marginBottom: 14,
@@ -489,7 +489,7 @@ const styles = StyleSheet.create({
     fontSize: 22,
   },
   kioskTitle: {
-    color: '#0A84FF',
+    color: 'rgba(235, 235, 245, 0.6)',
     fontSize: 11,
     fontWeight: '600',
     letterSpacing: 0.2,
@@ -564,12 +564,12 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   zoneChipSelected: {
-    borderColor: '#0A84FF',
-    backgroundColor: 'rgba(10, 132, 255, 0.18)',
+    borderColor: '#ffffff',
+    backgroundColor: '#ffffff',
   },
   zoneChipRestricted: {
     borderColor: 'rgba(255, 69, 58, 0.6)',
-    backgroundColor: 'rgba(255, 69, 58, 0.12)',
+    backgroundColor: '#1c1c1e',
   },
   zoneText: {
     color: 'rgba(235, 235, 245, 0.65)',
@@ -577,8 +577,8 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   zoneTextSelected: {
-    color: '#ffffff',
-    fontWeight: '600',
+    color: '#000000',
+    fontWeight: '700',
   },
   tabContainer: {
     flexDirection: 'row',
@@ -596,7 +596,7 @@ const styles = StyleSheet.create({
     borderRadius: 9999,
   },
   tabButtonActive: {
-    backgroundColor: '#2c2c2e',
+    backgroundColor: '#ffffff',
   },
   tabText: {
     color: 'rgba(235, 235, 245, 0.65)',
@@ -604,8 +604,8 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   tabTextActive: {
-    color: '#ffffff',
-    fontWeight: '600',
+    color: '#000000',
+    fontWeight: '700',
   },
   langScroll: {
     marginBottom: 18,
@@ -620,8 +620,8 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   langChipActive: {
-    borderColor: '#30D158',
-    backgroundColor: 'rgba(48, 209, 88, 0.15)',
+    borderColor: '#ffffff',
+    backgroundColor: '#2c2c2e',
   },
   langText: {
     color: 'rgba(235, 235, 245, 0.65)',
@@ -629,19 +629,19 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   langTextActive: {
-    color: '#30D158',
+    color: '#ffffff',
     fontWeight: '600',
   },
   dialectWarningBox: {
-    backgroundColor: 'rgba(255, 159, 10, 0.12)',
+    backgroundColor: '#1c1c1e',
     borderWidth: 1,
-    borderColor: 'rgba(255, 159, 10, 0.25)',
+    borderColor: 'rgba(255, 255, 255, 0.1)',
     padding: 10,
     borderRadius: 16,
     marginBottom: 16,
   },
   dialectWarningText: {
-    color: '#FF9F0A',
+    color: 'rgba(235, 235, 245, 0.65)',
     fontSize: 12,
     lineHeight: 16,
     fontWeight: '500',
@@ -656,18 +656,18 @@ const styles = StyleSheet.create({
     borderRadius: 60,
     alignItems: 'center',
     justifyContent: 'center',
-    elevation: 8,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.45,
-    shadowRadius: 16,
   },
   micHeroIdle: {
-    backgroundColor: '#0A84FF',
-    shadowColor: '#0A84FF',
+    backgroundColor: '#1c1c1e',
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.25)',
   },
   micHeroRecording: {
     backgroundColor: '#FF453A',
     shadowColor: '#FF453A',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.45,
+    shadowRadius: 16,
   },
   micIcon: {
     fontSize: 38,
@@ -681,7 +681,7 @@ const styles = StyleSheet.create({
     letterSpacing: -0.2,
   },
   micSubText: {
-    color: 'rgba(255, 255, 255, 0.75)',
+    color: 'rgba(255, 255, 255, 0.65)',
     fontSize: 10,
     textAlign: 'center',
     marginTop: 2,
@@ -691,7 +691,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     marginTop: 18,
-    backgroundColor: 'rgba(255, 69, 58, 0.15)',
+    backgroundColor: '#1c1c1e',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 9999,
@@ -703,7 +705,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FF453A',
   },
   recordingStatusText: {
-    color: '#FF453A',
+    color: '#ffffff',
     fontSize: 13,
     fontWeight: '600',
   },
@@ -723,14 +725,14 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   submitTextButton: {
-    backgroundColor: '#0A84FF',
+    backgroundColor: '#ffffff',
     minHeight: 52,
     borderRadius: 9999,
     alignItems: 'center',
     justifyContent: 'center',
   },
   submitTextButtonText: {
-    color: '#ffffff',
+    color: '#000000',
     fontSize: 16,
     fontWeight: '600',
     letterSpacing: -0.2,
@@ -745,7 +747,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   loadingText: {
-    color: '#0A84FF',
+    color: 'rgba(235, 235, 245, 0.7)',
     fontSize: 14,
     fontWeight: '500',
     marginTop: 10,
@@ -771,15 +773,15 @@ const styles = StyleSheet.create({
     letterSpacing: -0.3,
   },
   confBadge: {
-    backgroundColor: 'rgba(48, 209, 88, 0.15)',
+    backgroundColor: '#2c2c2e',
     borderWidth: 1,
-    borderColor: 'rgba(48, 209, 88, 0.3)',
+    borderColor: 'rgba(255, 255, 255, 0.15)',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 9999,
   },
   confBadgeText: {
-    color: '#30D158',
+    color: '#ffffff',
     fontSize: 11,
     fontWeight: '600',
   },
@@ -819,27 +821,27 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   clarificationBanner: {
-    backgroundColor: 'rgba(255, 159, 10, 0.12)',
+    backgroundColor: '#1c1c1e',
     borderWidth: 1,
-    borderColor: 'rgba(255, 159, 10, 0.25)',
+    borderColor: 'rgba(255, 255, 255, 0.12)',
     borderRadius: 16,
     padding: 12,
     marginBottom: 16,
   },
   clarificationTitle: {
-    color: '#FF9F0A',
+    color: '#ffffff',
     fontSize: 12,
     fontWeight: '700',
     marginBottom: 4,
   },
   clarificationText: {
-    color: 'rgba(255, 255, 255, 0.9)',
+    color: 'rgba(235, 235, 245, 0.85)',
     fontSize: 13,
     fontWeight: '500',
     lineHeight: 18,
   },
   confirmButton: {
-    backgroundColor: '#30D158',
+    backgroundColor: '#ffffff',
     minHeight: 52,
     borderRadius: 9999,
     alignItems: 'center',
@@ -847,7 +849,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   confirmButtonText: {
-    color: '#ffffff',
+    color: '#000000',
     fontSize: 16,
     fontWeight: '600',
     letterSpacing: -0.2,

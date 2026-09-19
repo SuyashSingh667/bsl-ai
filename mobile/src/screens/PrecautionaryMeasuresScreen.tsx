@@ -297,7 +297,7 @@ export const PrecautionaryMeasuresScreen: React.FC<PrecautionaryMeasuresScreenPr
             {isHindi ? 'अनिवार्य सुरक्षा कदम (चेकलिस्ट)' : 'Mandatory Safety Action Checklist'}:
           </Text>
           {isLoadingPrecautions && (
-            <ActivityIndicator size="small" color="#38bdf8" style={{ marginLeft: 8 }} />
+            <ActivityIndicator size="small" color="#ffffff" style={{ marginLeft: 8 }} />
           )}
         </View>
 
@@ -408,7 +408,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 16,
-    backgroundColor: 'rgba(10, 132, 255, 0.15)',
+    backgroundColor: '#2c2c2e',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 14,
@@ -439,7 +439,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#1c1c1e',
     borderWidth: 1,
-    borderColor: 'rgba(10, 132, 255, 0.3)',
+    borderColor: 'rgba(255, 255, 255, 0.15)',
     borderRadius: 16,
     paddingHorizontal: 14,
     paddingVertical: 10,
@@ -449,7 +449,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   personalizedBadgeText: {
-    color: '#0A84FF',
+    color: 'rgba(235, 235, 245, 0.85)',
     fontSize: 13,
     fontWeight: '500',
     flex: 1,
@@ -466,14 +466,14 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.12)',
   },
   audioBriefingButtonPlaying: {
-    backgroundColor: 'rgba(10, 132, 255, 0.15)',
-    borderColor: '#0A84FF',
+    backgroundColor: '#2c2c2e',
+    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
   audioIconBox: {
     width: 44,
     height: 44,
     borderRadius: 14,
-    backgroundColor: 'rgba(10, 132, 255, 0.15)',
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -490,14 +490,14 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   audioButtonTitle: {
-    color: '#0A84FF',
+    color: '#ffffff',
     fontSize: 15,
     fontWeight: '600',
     flex: 1,
     letterSpacing: -0.2,
   },
   liveAudioBadge: {
-    backgroundColor: '#FF453A',
+    backgroundColor: '#3a3a3c',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 9999,
@@ -551,11 +551,11 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.12)',
   },
   complianceCountPillDone: {
-    backgroundColor: 'rgba(48, 209, 88, 0.2)',
-    borderColor: '#30D158',
+    backgroundColor: '#2c2c2e',
+    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
   complianceCountText: {
-    color: '#0A84FF',
+    color: '#ffffff',
     fontSize: 12,
     fontWeight: '600',
   },
@@ -567,11 +567,11 @@ const styles = StyleSheet.create({
   },
   progressBarFill: {
     height: '100%',
-    backgroundColor: '#0A84FF',
+    backgroundColor: '#ffffff',
     borderRadius: 3,
   },
   progressBarFillDone: {
-    backgroundColor: '#30D158',
+    backgroundColor: '#ffffff',
   },
   sectionHeaderRow: {
     flexDirection: 'row',
@@ -595,8 +595,8 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.12)',
   },
   checklistItemCardChecked: {
-    borderColor: 'rgba(48, 209, 88, 0.45)',
-    backgroundColor: 'rgba(48, 209, 88, 0.08)',
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    backgroundColor: '#242426',
   },
   checkboxContainer: {
     alignItems: 'center',
@@ -615,8 +615,8 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   checkboxBoxChecked: {
-    borderColor: '#30D158',
-    backgroundColor: '#30D158',
+    borderColor: '#ffffff',
+    backgroundColor: '#ffffff',
   },
   checkboxCheckmark: {
     color: 'transparent',
@@ -624,7 +624,7 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
   checkboxCheckmarkChecked: {
-    color: '#ffffff',
+    color: '#000000',
   },
   cardCategoryIcon: {
     fontSize: 20,
@@ -646,7 +646,7 @@ const styles = StyleSheet.create({
     letterSpacing: -0.2,
   },
   measureTitleChecked: {
-    color: '#30D158',
+    color: '#ffffff',
   },
   measureTitleSub: {
     color: 'rgba(235, 235, 245, 0.45)',
@@ -671,19 +671,19 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.12)',
   },
   checklistBadgeChecked: {
-    backgroundColor: 'rgba(48, 209, 88, 0.2)',
-    borderColor: '#30D158',
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    borderColor: 'rgba(255, 255, 255, 0.25)',
   },
   checklistBadgeText: {
-    color: '#0A84FF',
+    color: 'rgba(235, 235, 245, 0.7)',
     fontSize: 12,
     fontWeight: '600',
   },
   checklistBadgeTextChecked: {
-    color: '#30D158',
+    color: '#ffffff',
   },
   proceedButton: {
-    backgroundColor: '#0A84FF',
+    backgroundColor: '#ffffff',
     minHeight: 52,
     borderRadius: 9999,
     alignItems: 'center',
@@ -691,10 +691,10 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   proceedButtonDone: {
-    backgroundColor: '#30D158',
+    backgroundColor: '#ffffff',
   },
   proceedButtonText: {
-    color: '#ffffff',
+    color: '#000000',
     fontSize: 15,
     fontWeight: '600',
     letterSpacing: -0.2,
@@ -704,7 +704,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#1c1c1e',
     borderWidth: 1,
-    borderColor: 'rgba(255, 159, 10, 0.3)',
+    borderColor: 'rgba(255, 255, 255, 0.15)',
     borderRadius: 18,
     padding: 14,
     marginBottom: 14,
@@ -717,7 +717,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   aiDisclaimerTitle: {
-    color: '#FF9F0A',
+    color: '#ffffff',
     fontSize: 13,
     fontWeight: '700',
     marginBottom: 2,
@@ -759,14 +759,14 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     backgroundColor: '#1c1c1e',
     borderWidth: 1,
-    borderColor: 'rgba(10, 132, 255, 0.3)',
+    borderColor: 'rgba(255, 255, 255, 0.15)',
     borderRadius: 9999,
     paddingHorizontal: 10,
     paddingVertical: 4,
     marginBottom: 8,
   },
   sopCitationBadgeText: {
-    color: '#0A84FF',
+    color: 'rgba(235, 235, 245, 0.75)',
     fontSize: 11,
     fontWeight: '600',
   },

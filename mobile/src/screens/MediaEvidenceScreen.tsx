@@ -116,13 +116,13 @@ export const MediaEvidenceScreen: React.FC<MediaEvidenceScreenProps> = ({
       <StepIndicator currentStep={2} />
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={[styles.headerBadge, { borderColor: 'rgba(59, 130, 246, 0.3)', backgroundColor: 'rgba(59, 130, 246, 0.15)' }]}>
-          <Text style={[styles.headerBadgeText, { color: '#60a5fa' }]}>📸 FIELD EVIDENCE (OPTIONAL)</Text>
+        <View style={[styles.headerBadge, { borderColor: 'rgba(255, 255, 255, 0.15)', backgroundColor: '#1c1c1e' }]}>
+          <Text style={[styles.headerBadgeText, { color: 'rgba(235, 235, 245, 0.85)' }]}>📸 FIELD EVIDENCE (OPTIONAL)</Text>
         </View>
 
         <Text style={styles.title}>Physical Evidence Attachment</Text>
         <Text style={styles.subtitle}>
-          Uploading a photograph or video is <Text style={[styles.highlightText, { color: '#60a5fa' }]}>OPTIONAL</Text>.
+          Uploading a photograph or video is <Text style={[styles.highlightText, { color: '#ffffff' }]}>OPTIONAL</Text>.
           Visual proof helps AI and emergency crews locate hazards faster, but is never required to submit a report.
         </Text>
 
@@ -251,7 +251,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   highlightText: {
-    color: '#0A84FF',
+    color: '#ffffff',
     fontWeight: '600',
   },
   optionsContainer: {
@@ -271,7 +271,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 14,
-    backgroundColor: 'rgba(10, 132, 255, 0.15)',
+    backgroundColor: '#2c2c2e',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 14,
@@ -280,7 +280,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 14,
-    backgroundColor: 'rgba(255, 69, 58, 0.15)',
+    backgroundColor: '#2c2c2e',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 14,
@@ -289,7 +289,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 14,
-    backgroundColor: 'rgba(48, 209, 88, 0.15)',
+    backgroundColor: '#2c2c2e',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 14,
@@ -335,7 +335,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   videoPlaceholderText: {
-    color: '#0A84FF',
+    color: '#ffffff',
     fontSize: 14,
     fontWeight: '600',
   },
@@ -356,13 +356,13 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   uploadConfirmButton: {
-    backgroundColor: '#0A84FF',
+    backgroundColor: '#ffffff',
     paddingVertical: 12,
     paddingHorizontal: 22,
     borderRadius: 9999,
   },
   uploadConfirmText: {
-    color: '#ffffff',
+    color: '#000000',
     fontSize: 14,
     fontWeight: '600',
     letterSpacing: -0.2,

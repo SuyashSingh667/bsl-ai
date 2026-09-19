@@ -111,37 +111,6 @@ export const ReportTypeSelect: React.FC<ReportTypeSelectProps> = ({
         )}
       </View>
 
-      {/* Phase 6 Positive-Reinforcement Community Impact Banner (Anti-Surveillance) */}
-      <View style={styles.impactBanner}>
-        <View style={styles.impactHeader}>
-          <Text style={styles.impactIcon}>🎉</Text>
-          <View style={styles.impactTitleWrap}>
-            <Text style={styles.impactTitle}>
-              {cultureMetrics ? `${cultureMetrics.total_hazards_fixed} Hazards Fixed at Bokaro!` : 'Plant Safety Community'}
-            </Text>
-            <Text style={styles.impactSub}>
-              {currentLang === 'hi'
-                ? 'आपकी रिपोर्टों ने वास्तविक खतरों को हल किया और कार्यस्थल को सुरक्षित बनाया।'
-                : 'Near-miss reporting makes the plant floor safer every day.'}
-            </Text>
-          </View>
-        </View>
-
-        {cultureMetrics && cultureMetrics.shift_participation && (
-          <View style={styles.shiftBreakdown}>
-            <Text style={styles.shiftLabel}>Shift Collaboration / शिफ्ट भागीदारी (No Blame):</Text>
-            <View style={styles.shiftPillsRow}>
-              {cultureMetrics.shift_participation.map((sp) => (
-                <View key={sp.shift} style={styles.shiftPill}>
-                  <Text style={styles.shiftPillName}>{sp.shift}</Text>
-                  <Text style={styles.shiftPillPct}>{sp.pct}% ({sp.resolved} fixed)</Text>
-                </View>
-              ))}
-            </View>
-          </View>
-        )}
-      </View>
-
       {/* Quick Action Navigation Bar: Tracker & Process Explainer */}
       <View style={styles.toolsRow}>
         <TouchableOpacity
@@ -302,16 +271,16 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   badge: {
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
+    borderColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 9999,
     paddingHorizontal: 12,
     paddingVertical: 5,
     alignSelf: 'flex-start',
   },
   badgeText: {
-    color: '#0A84FF',
+    color: 'rgba(235, 235, 245, 0.7)',
     fontSize: 11,
     fontWeight: '600',
     letterSpacing: 0.2,
@@ -321,19 +290,21 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     borderRadius: 9999,
     borderWidth: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   outboxPillClean: {
-    backgroundColor: 'rgba(48, 209, 88, 0.15)',
-    borderColor: 'rgba(48, 209, 88, 0.35)',
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   outboxPillPending: {
-    backgroundColor: 'rgba(255, 159, 10, 0.15)',
-    borderColor: 'rgba(255, 159, 10, 0.35)',
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: 'rgba(255, 255, 255, 0.15)',
   },
   outboxText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#ffffff',
+    color: 'rgba(235, 235, 245, 0.75)',
   },
   title: {
     fontSize: 28,
@@ -344,7 +315,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 14,
-    color: 'rgba(235, 235, 245, 0.65)',
+    color: 'rgba(235, 235, 245, 0.6)',
     marginBottom: 16,
     lineHeight: 20,
     letterSpacing: -0.2,
@@ -360,20 +331,20 @@ const styles = StyleSheet.create({
     gap: 6,
     backgroundColor: '#1c1c1e',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
+    borderColor: 'rgba(255, 255, 255, 0.1)',
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 9999,
   },
   langChipSelected: {
-    borderColor: '#0A84FF',
-    backgroundColor: 'rgba(10, 132, 255, 0.18)',
+    borderColor: '#ffffff',
+    backgroundColor: '#2c2c2e',
   },
   langFlag: {
     fontSize: 14,
   },
   langText: {
-    color: 'rgba(235, 235, 245, 0.65)',
+    color: 'rgba(235, 235, 245, 0.6)',
     fontSize: 13,
     fontWeight: '500',
     letterSpacing: -0.1,
@@ -383,83 +354,17 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   dialectNoticeBox: {
-    backgroundColor: 'rgba(255, 159, 10, 0.12)',
+    backgroundColor: '#1c1c1e',
     borderWidth: 1,
-    borderColor: 'rgba(255, 159, 10, 0.25)',
+    borderColor: 'rgba(255, 255, 255, 0.08)',
     borderRadius: 16,
     padding: 10,
     marginTop: 6,
   },
   dialectNoticeText: {
-    color: '#FF9F0A',
-    fontSize: 12,
-    lineHeight: 16,
-    fontWeight: '500',
-  },
-  impactBanner: {
-    backgroundColor: '#1c1c1e',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
-    borderRadius: 20,
-    padding: 16,
-    marginBottom: 14,
-  },
-  impactHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginBottom: 8,
-  },
-  impactIcon: {
-    fontSize: 26,
-  },
-  impactTitleWrap: {
-    flex: 1,
-  },
-  impactTitle: {
-    color: '#30D158',
-    fontSize: 15,
-    fontWeight: '700',
-    letterSpacing: -0.3,
-  },
-  impactSub: {
     color: 'rgba(235, 235, 245, 0.65)',
     fontSize: 12,
     lineHeight: 16,
-    marginTop: 2,
-  },
-  shiftBreakdown: {
-    marginTop: 8,
-    borderTopWidth: 0.5,
-    borderTopColor: 'rgba(255, 255, 255, 0.1)',
-    paddingTop: 8,
-  },
-  shiftLabel: {
-    color: 'rgba(235, 235, 245, 0.6)',
-    fontSize: 11,
-    fontWeight: '600',
-    marginBottom: 6,
-  },
-  shiftPillsRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  shiftPill: {
-    flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
-    borderRadius: 12,
-    paddingVertical: 6,
-    paddingHorizontal: 8,
-    alignItems: 'center',
-  },
-  shiftPillName: {
-    color: '#ffffff',
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  shiftPillPct: {
-    color: '#30D158',
-    fontSize: 11,
     fontWeight: '500',
   },
   toolsRow: {
@@ -474,7 +379,7 @@ const styles = StyleSheet.create({
     gap: 10,
     backgroundColor: '#1c1c1e',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
+    borderColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 16,
     padding: 12,
   },
@@ -493,22 +398,24 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   card: {
+    backgroundColor: '#1c1c1e',
     borderRadius: 22,
     padding: 18,
     marginBottom: 14,
     borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   emergencyCard: {
-    backgroundColor: 'rgba(255, 69, 58, 0.08)',
-    borderColor: 'rgba(255, 69, 58, 0.35)',
+    backgroundColor: '#1c1c1e',
+    borderColor: 'rgba(255, 255, 255, 0.12)',
   },
   standardCard: {
-    backgroundColor: 'rgba(10, 132, 255, 0.08)',
-    borderColor: 'rgba(10, 132, 255, 0.35)',
+    backgroundColor: '#1c1c1e',
+    borderColor: 'rgba(255, 255, 255, 0.12)',
   },
   anonymousCard: {
-    backgroundColor: 'rgba(191, 90, 242, 0.08)',
-    borderColor: 'rgba(191, 90, 242, 0.35)',
+    backgroundColor: '#1c1c1e',
+    borderColor: 'rgba(255, 255, 255, 0.12)',
   },
   cardHeader: {
     flexDirection: 'row',
@@ -520,7 +427,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 14,
-    backgroundColor: 'rgba(255, 69, 58, 0.2)',
+    backgroundColor: '#2c2c2e',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -528,7 +435,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 14,
-    backgroundColor: 'rgba(10, 132, 255, 0.2)',
+    backgroundColor: '#2c2c2e',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -536,7 +443,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 14,
-    backgroundColor: 'rgba(191, 90, 242, 0.2)',
+    backgroundColor: '#2c2c2e',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -544,25 +451,31 @@ const styles = StyleSheet.create({
     fontSize: 22,
   },
   urgencyTagRed: {
-    backgroundColor: '#FF453A',
+    backgroundColor: '#2c2c2e',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 9999,
   },
   urgencyTagBlue: {
-    backgroundColor: '#0A84FF',
+    backgroundColor: '#2c2c2e',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 9999,
   },
   urgencyTagPurple: {
-    backgroundColor: '#BF5AF2',
+    backgroundColor: '#2c2c2e',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 9999,
   },
   urgencyText: {
-    color: '#ffffff',
+    color: 'rgba(235, 235, 245, 0.75)',
     fontSize: 10,
     fontWeight: '700',
     letterSpacing: 0.2,
@@ -575,7 +488,7 @@ const styles = StyleSheet.create({
     letterSpacing: -0.3,
   },
   cardDescription: {
-    color: 'rgba(235, 235, 245, 0.65)',
+    color: 'rgba(235, 235, 245, 0.6)',
     fontSize: 13,
     lineHeight: 18,
     marginBottom: 12,
@@ -585,19 +498,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   actionTextRed: {
-    color: '#FF453A',
+    color: '#ffffff',
     fontSize: 14,
     fontWeight: '600',
     letterSpacing: -0.2,
   },
   actionTextBlue: {
-    color: '#0A84FF',
+    color: '#ffffff',
     fontSize: 14,
     fontWeight: '600',
     letterSpacing: -0.2,
   },
   shiftSelectWrap: {
-    backgroundColor: '#1c1c1e',
+    backgroundColor: '#161618',
     borderRadius: 16,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.08)',
@@ -605,7 +518,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   shiftSelectLabel: {
-    color: 'rgba(235, 235, 245, 0.6)',
+    color: 'rgba(235, 235, 245, 0.55)',
     fontSize: 11,
     fontWeight: '600',
     marginBottom: 6,
@@ -616,7 +529,7 @@ const styles = StyleSheet.create({
   },
   shiftChip: {
     flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    backgroundColor: '#2c2c2e',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 9999,
@@ -624,8 +537,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   shiftChipActive: {
-    backgroundColor: '#BF5AF2',
-    borderColor: '#BF5AF2',
+    backgroundColor: '#ffffff',
+    borderColor: '#ffffff',
   },
   shiftChipText: {
     color: 'rgba(235, 235, 245, 0.65)',
@@ -633,17 +546,17 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   shiftChipTextActive: {
-    color: '#ffffff',
+    color: '#000000',
     fontWeight: '700',
   },
   anonActionButton: {
-    backgroundColor: '#BF5AF2',
+    backgroundColor: '#ffffff',
     borderRadius: 9999,
     paddingVertical: 14,
     alignItems: 'center',
   },
   anonActionText: {
-    color: '#ffffff',
+    color: '#000000',
     fontSize: 15,
     fontWeight: '600',
     letterSpacing: -0.2,
@@ -651,14 +564,14 @@ const styles = StyleSheet.create({
   kioskModeButton: {
     backgroundColor: '#1c1c1e',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
+    borderColor: 'rgba(255, 255, 255, 0.12)',
     paddingVertical: 14,
     borderRadius: 9999,
     alignItems: 'center',
     marginBottom: 12,
   },
   kioskModeText: {
-    color: '#0A84FF',
+    color: '#ffffff',
     fontSize: 14,
     fontWeight: '600',
     letterSpacing: -0.2,
@@ -679,13 +592,13 @@ const styles = StyleSheet.create({
     letterSpacing: -0.2,
   },
   consentNoticeTextEn: {
-    color: 'rgba(235, 235, 245, 0.65)',
+    color: 'rgba(235, 235, 245, 0.6)',
     fontSize: 11,
     lineHeight: 15,
     marginBottom: 4,
   },
   consentNoticeTextHi: {
-    color: 'rgba(235, 235, 245, 0.5)',
+    color: 'rgba(235, 235, 245, 0.45)',
     fontSize: 11,
     lineHeight: 15,
   },
@@ -700,7 +613,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   settingsButtonText: {
-    color: 'rgba(235, 235, 245, 0.65)',
+    color: 'rgba(235, 235, 245, 0.6)',
     fontSize: 13,
     fontWeight: '500',
   },

@@ -105,7 +105,7 @@ export const TicketResultScreen: React.FC<TicketResultScreenProps> = ({
             <Text style={styles.factLabel}>Visual Confirmation:</Text>
             <Text style={[
               styles.factValue,
-              visualAnalysis ? { color: visualAnalysis.is_valid_evidence ? '#34d399' : '#f59e0b' } : undefined
+              visualAnalysis ? { color: visualAnalysis.is_valid_evidence ? '#ffffff' : 'rgba(235, 235, 245, 0.7)' } : undefined
             ]}>
               {visualAnalysis
                 ? (visualAnalysis.is_valid_evidence
@@ -222,7 +222,7 @@ export const TicketResultScreen: React.FC<TicketResultScreenProps> = ({
             </View>
             <View style={styles.factRow}>
               <Text style={styles.factLabel}>Model & License:</Text>
-              <Text style={[styles.factValue, { color: '#38bdf8' }]}>
+              <Text style={[styles.factValue, { color: '#ffffff' }]}>
                 {visualAnalysis.model_version || 'BSL-Vision-v2.5'} ({visualAnalysis.detector_license || 'Apache-2.0'})
               </Text>
             </View>
@@ -244,7 +244,7 @@ export const TicketResultScreen: React.FC<TicketResultScreenProps> = ({
               <Text style={styles.factLabel}>Risk Score Impact:</Text>
               <Text style={[
                 styles.factValue,
-                { color: visualAnalysis.is_valid_evidence ? '#34d399' : '#f59e0b' }
+                { color: visualAnalysis.is_valid_evidence ? '#ffffff' : 'rgba(235, 235, 245, 0.7)' }
               ]}>
                 {visualAnalysis.is_valid_evidence ? 'Elevated via visual proof' : 'Held neutral (NOT inflated)'}
               </Text>
@@ -334,7 +334,7 @@ const styles = StyleSheet.create({
     letterSpacing: -0.4,
   },
   ticketIdText: {
-    color: '#0A84FF',
+    color: 'rgba(235, 235, 245, 0.7)',
     fontSize: 13,
     fontWeight: '600',
     letterSpacing: 0.5,
@@ -346,28 +346,28 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   threatBadge: {
-    backgroundColor: 'rgba(255, 69, 58, 0.15)',
+    backgroundColor: '#2c2c2e',
     paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: 9999,
     borderWidth: 1,
-    borderColor: 'rgba(255, 69, 58, 0.4)',
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   threatBadgeText: {
-    color: '#FF453A',
+    color: '#ffffff',
     fontSize: 12,
     fontWeight: '700',
   },
   categoryBadge: {
-    backgroundColor: 'rgba(10, 132, 255, 0.15)',
+    backgroundColor: '#1c1c1e',
     paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: 9999,
     borderWidth: 1,
-    borderColor: 'rgba(10, 132, 255, 0.4)',
+    borderColor: 'rgba(255, 255, 255, 0.15)',
   },
   categoryBadgeText: {
-    color: '#0A84FF',
+    color: 'rgba(235, 235, 245, 0.85)',
     fontSize: 12,
     fontWeight: '700',
   },
@@ -380,7 +380,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   cardHeader: {
-    color: '#0A84FF',
+    color: 'rgba(235, 235, 245, 0.65)',
     fontSize: 12,
     fontWeight: '600',
     textTransform: 'uppercase',
@@ -424,7 +424,7 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#30D158',
+    backgroundColor: '#ffffff',
     marginRight: 10,
   },
   recipientInfo: {
@@ -441,7 +441,7 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
   newReportButton: {
-    backgroundColor: '#0A84FF',
+    backgroundColor: '#ffffff',
     minHeight: 52,
     borderRadius: 9999,
     alignItems: 'center',
@@ -449,17 +449,17 @@ const styles = StyleSheet.create({
     marginTop: 14,
   },
   newReportButtonText: {
-    color: '#ffffff',
+    color: '#000000',
     fontSize: 16,
     fontWeight: '600',
     letterSpacing: -0.2,
   },
   aiCardConfirmed: {
-    borderColor: 'rgba(48, 209, 88, 0.4)',
+    borderColor: 'rgba(255, 255, 255, 0.2)',
     backgroundColor: '#1c1c1e',
   },
   aiCardInconclusive: {
-    borderColor: 'rgba(255, 159, 10, 0.4)',
+    borderColor: 'rgba(255, 255, 255, 0.15)',
     backgroundColor: '#1c1c1e',
   },
   aiHeaderRow: {
@@ -469,7 +469,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   aiHeaderTitle: {
-    color: '#0A84FF',
+    color: 'rgba(235, 235, 245, 0.65)',
     fontSize: 12,
     fontWeight: '600',
     textTransform: 'uppercase',
@@ -482,22 +482,22 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   aiBadgeConfirmed: {
-    backgroundColor: 'rgba(48, 209, 88, 0.15)',
-    borderColor: 'rgba(48, 209, 88, 0.35)',
+    backgroundColor: '#2c2c2e',
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   aiBadgeInconclusive: {
-    backgroundColor: 'rgba(255, 159, 10, 0.15)',
-    borderColor: 'rgba(255, 159, 10, 0.35)',
+    backgroundColor: '#1c1c1e',
+    borderColor: 'rgba(255, 255, 255, 0.15)',
   },
   aiStatusBadgeText: {
     fontSize: 11,
     fontWeight: '600',
   },
   aiBadgeTextConfirmed: {
-    color: '#30D158',
+    color: '#ffffff',
   },
   aiBadgeTextInconclusive: {
-    color: '#FF9F0A',
+    color: 'rgba(235, 235, 245, 0.7)',
   },
   aiSummaryText: {
     color: 'rgba(235, 235, 245, 0.65)',
@@ -514,7 +514,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#1c1c1e',
     borderWidth: 1,
-    borderColor: 'rgba(255, 159, 10, 0.3)',
+    borderColor: 'rgba(255, 255, 255, 0.15)',
     borderRadius: 18,
     padding: 14,
     marginBottom: 14,
@@ -527,7 +527,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   aiNoticeTitle: {
-    color: '#FF9F0A',
+    color: '#ffffff',
     fontSize: 13,
     fontWeight: '700',
     marginBottom: 2,
@@ -542,7 +542,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#1c1c1e',
     borderWidth: 1,
-    borderColor: 'rgba(191, 90, 242, 0.35)',
+    borderColor: 'rgba(255, 255, 255, 0.15)',
     borderRadius: 18,
     padding: 14,
     marginBottom: 14,
@@ -555,7 +555,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   humanReviewTitle: {
-    color: '#BF5AF2',
+    color: '#ffffff',
     fontSize: 13,
     fontWeight: '700',
     marginBottom: 2,
@@ -572,15 +572,15 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   advisoryBadge: {
-    backgroundColor: 'rgba(191, 90, 242, 0.15)',
+    backgroundColor: '#2c2c2e',
     borderWidth: 1,
-    borderColor: 'rgba(191, 90, 242, 0.35)',
+    borderColor: 'rgba(255, 255, 255, 0.2)',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 9999,
   },
   advisoryBadgeText: {
-    color: '#BF5AF2',
+    color: '#ffffff',
     fontSize: 11,
     fontWeight: '600',
   },
@@ -610,7 +610,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   matrixVal: {
-    color: '#0A84FF',
+    color: '#ffffff',
     fontSize: 14,
     fontWeight: '700',
   },
@@ -628,7 +628,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   finalScoreVal: {
-    color: '#FF453A',
+    color: '#ffffff',
     fontSize: 16,
     fontWeight: '700',
   },

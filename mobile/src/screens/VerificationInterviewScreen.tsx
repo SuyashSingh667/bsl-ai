@@ -339,7 +339,7 @@ export const VerificationInterviewScreen: React.FC<VerificationInterviewScreenPr
 
         {isLoading ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#38bdf8" />
+            <ActivityIndicator size="large" color="#ffffff" />
             <Text style={styles.loadingText}>Synthesizing adaptive verification question...</Text>
           </View>
         ) : (
@@ -386,7 +386,7 @@ export const VerificationInterviewScreen: React.FC<VerificationInterviewScreenPr
 
               {isTranscribing ? (
                 <View style={styles.transcribingBox}>
-                  <ActivityIndicator size="small" color="#38bdf8" />
+                  <ActivityIndicator size="small" color="#ffffff" />
                   <Text style={styles.transcribingText}>
                     Transcribing with Whisper Neural AI...
                   </Text>
@@ -531,7 +531,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   sopBadgeText: {
-    color: '#0A84FF',
+    color: '#ffffff',
     fontSize: 12,
     fontWeight: '600',
   },
@@ -544,11 +544,11 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.12)',
   },
   autoMicPillActive: {
-    backgroundColor: 'rgba(48, 209, 88, 0.15)',
-    borderColor: 'rgba(48, 209, 88, 0.35)',
+    backgroundColor: '#2c2c2e',
+    borderColor: 'rgba(255, 255, 255, 0.25)',
   },
   autoMicPillText: {
-    color: '#30D158',
+    color: '#ffffff',
     fontSize: 11,
     fontWeight: '600',
   },
@@ -565,7 +565,7 @@ const styles = StyleSheet.create({
     paddingVertical: 50,
   },
   loadingText: {
-    color: '#0A84FF',
+    color: 'rgba(235, 235, 245, 0.7)',
     marginTop: 12,
     fontSize: 14,
     fontWeight: '500',
@@ -596,11 +596,11 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.12)',
   },
   listenButtonPlaying: {
-    backgroundColor: 'rgba(10, 132, 255, 0.2)',
-    borderColor: '#0A84FF',
+    backgroundColor: '#2c2c2e',
+    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
   listenButtonText: {
-    color: '#0A84FF',
+    color: '#ffffff',
     fontSize: 13,
     fontWeight: '600',
   },
@@ -613,11 +613,11 @@ const styles = StyleSheet.create({
     marginBottom: 18,
   },
   voiceSectionActive: {
-    backgroundColor: 'rgba(255, 69, 58, 0.08)',
-    borderColor: '#FF453A',
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
   voiceSectionWaiting: {
-    borderColor: '#0A84FF',
+    borderColor: 'rgba(255, 255, 255, 0.25)',
   },
   voiceHeaderRow: {
     flexDirection: 'row',
@@ -626,13 +626,13 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   voiceSectionTitle: {
-    color: '#0A84FF',
+    color: 'rgba(235, 235, 245, 0.7)',
     fontSize: 12,
     fontWeight: '600',
     letterSpacing: 0.2,
   },
   livePulseBadge: {
-    backgroundColor: '#FF453A',
+    backgroundColor: '#3a3a3c',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 9999,
@@ -645,11 +645,11 @@ const styles = StyleSheet.create({
   voiceButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(10, 132, 255, 0.1)',
+    backgroundColor: '#2c2c2e',
     borderRadius: 18,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#0A84FF',
+    borderColor: 'rgba(255, 255, 255, 0.12)',
   },
   voiceButtonDisabled: {
     opacity: 0.5,
@@ -662,7 +662,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   voiceButtonTitle: {
-    color: '#0A84FF',
+    color: '#ffffff',
     fontSize: 16,
     fontWeight: '600',
     marginBottom: 2,
@@ -684,7 +684,7 @@ const styles = StyleSheet.create({
     letterSpacing: -0.2,
   },
   elapsedBadge: {
-    color: '#0A84FF',
+    color: 'rgba(235, 235, 245, 0.7)',
     fontSize: 13,
     fontWeight: '600',
     marginBottom: 14,
@@ -694,14 +694,14 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   stopRecordingButton: {
-    backgroundColor: '#30D158',
+    backgroundColor: '#ffffff',
     paddingVertical: 14,
     borderRadius: 9999,
     alignItems: 'center',
     marginBottom: 8,
   },
   stopRecordingButtonText: {
-    color: '#ffffff',
+    color: '#000000',
     fontSize: 15,
     fontWeight: '600',
     letterSpacing: -0.2,
@@ -728,7 +728,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   transcribingText: {
-    color: '#0A84FF',
+    color: 'rgba(235, 235, 245, 0.7)',
     fontSize: 13,
     fontWeight: '600',
     marginLeft: 10,
@@ -739,7 +739,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#000000',
     borderRadius: 14,
     borderLeftWidth: 3,
-    borderLeftColor: '#0A84FF',
+    borderLeftColor: '#ffffff',
   },
   transcriptLabel: {
     color: 'rgba(235, 235, 245, 0.45)',
@@ -790,7 +790,7 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   optionIndexText: {
-    color: '#0A84FF',
+    color: '#ffffff',
     fontSize: 13,
     fontWeight: '700',
   },
@@ -818,13 +818,13 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   customSendButton: {
-    backgroundColor: '#0A84FF',
+    backgroundColor: '#ffffff',
     paddingVertical: 12,
     paddingHorizontal: 20,
     borderRadius: 9999,
   },
   customSendText: {
-    color: '#ffffff',
+    color: '#000000',
     fontSize: 14,
     fontWeight: '600',
     letterSpacing: -0.2,

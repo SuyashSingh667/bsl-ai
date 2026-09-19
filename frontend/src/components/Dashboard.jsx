@@ -786,36 +786,11 @@ export default function Dashboard() {
             <p style={{ textAlign: "center", padding: "2rem", color: "#94a3b8" }}>Loading culture metrics...</p>
           ) : cultureData ? (
             <div>
-              {/* Headline Community Banner */}
-              <div style={{
-                background: "linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(6, 78, 59, 0.4) 100%)",
-                border: "1.5px solid #10b981",
-                borderRadius: "14px",
-                padding: "1.5rem",
-                marginBottom: "1.5rem",
-                display: "flex",
-                alignItems: "center",
-                gap: "1.5rem",
-              }}>
-                <div style={{ fontSize: "3.5rem" }}>🎉</div>
-                <div>
-                  <h2 style={{ fontSize: "1.5rem", color: "#34d399", margin: "0 0 0.5rem 0", fontWeight: "900" }}>
-                    {cultureData.total_hazards_fixed} Industrial Hazards Fixed This Month!
-                  </h2>
-                  <p style={{ color: "#e2e8f0", margin: "0 0 0.25rem 0", fontSize: "0.95rem" }}>
-                    {cultureData.impact_statement_en}
-                  </p>
-                  <p style={{ color: "#94a3b8", margin: 0, fontSize: "0.85rem", fontStyle: "italic" }}>
-                    {cultureData.impact_statement_hi}
-                  </p>
-                </div>
-              </div>
-
               {/* Anti-Surveillance Guarantee Callout */}
               <div style={{
-                background: "#0f172a",
-                border: "1px solid #38bdf8",
-                borderRadius: "10px",
+                background: "#1c1c1e",
+                border: "1px solid rgba(255, 255, 255, 0.12)",
+                borderRadius: "12px",
                 padding: "1rem 1.25rem",
                 marginBottom: "1.5rem",
                 display: "flex",
@@ -824,8 +799,8 @@ export default function Dashboard() {
               }}>
                 <div style={{ fontSize: "1.8rem" }}>🛡️</div>
                 <div>
-                  <strong style={{ color: "#38bdf8", fontSize: "0.95rem" }}>BSL Anti-Surveillance & Psychological Safety Policy:</strong>
-                  <p style={{ margin: "4px 0 0 0", color: "#cbd5e1", fontSize: "0.85rem", lineHeight: "1.4" }}>
+                  <strong style={{ color: "#ffffff", fontSize: "0.95rem" }}>BSL Anti-Surveillance & Psychological Safety Policy:</strong>
+                  <p style={{ margin: "4px 0 0 0", color: "rgba(235, 235, 245, 0.7)", fontSize: "0.85rem", lineHeight: "1.4" }}>
                     Under SAIL / Bokaro Steel Plant guidelines, safety reporting is collaborative problem-solving. No worker rankings, leaderboards, or disciplinary consequences exist for near-misses. Recognition is awarded collectively to plant shifts.
                   </p>
                 </div>

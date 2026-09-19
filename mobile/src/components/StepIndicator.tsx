@@ -70,12 +70,12 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   circleActive: {
-    backgroundColor: '#0A84FF',
-    borderColor: '#0A84FF',
+    backgroundColor: '#ffffff',
+    borderColor: '#ffffff',
   },
   circleCompleted: {
-    backgroundColor: '#30D158',
-    borderColor: '#30D158',
+    backgroundColor: '#2c2c2e',
+    borderColor: 'rgba(255, 255, 255, 0.25)',
   },
   circleText: {
     color: 'rgba(235, 235, 245, 0.6)',
@@ -83,7 +83,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   circleTextActive: {
-    color: '#ffffff',
+    color: '#000000',
   },
   label: {
     color: 'rgba(235, 235, 245, 0.45)',
@@ -92,7 +92,7 @@ const styles = StyleSheet.create({
     letterSpacing: -0.2,
   },
   labelActive: {
-    color: '#0A84FF',
+    color: '#ffffff',
     fontWeight: '600',
   },
   line: {
@@ -103,6 +103,6 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   lineCompleted: {
-    backgroundColor: '#30D158',
+    backgroundColor: 'rgba(255, 255, 255, 0.35)',
   },
 });
