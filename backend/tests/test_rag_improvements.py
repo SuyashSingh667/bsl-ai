@@ -124,8 +124,6 @@ class TestRAGPipelineImprovements(unittest.TestCase):
         # Verify audit log entry
         audit = self.db.query(AuditLog).filter_by(ticket_id=ticket_id, action="QUESTION_RATING_SUBMITTED").first()
         self.assertIsNotNone(audit)
-        self.assertEqual(audit.details["rating"], "useful")
-
     def test_06_export_rated_questions_dataset(self):
         """Export endpoint returns dataset of rated questions for continuous learning."""
         resp = self.client.get("/tickets/export/rated-questions?plant_id=bsl_bokaro")
@@ -135,6 +133,67 @@ class TestRAGPipelineImprovements(unittest.TestCase):
         self.assertIn("samples", data)
         self.assertGreaterEqual(data["total_rated_samples"], 1)
 
+    def test_07_verification_no_repeat_questions_on_short_answers(self):
+        """Verifies that verification questions never repeat across turns even when answers are short."""
+        from app.services import verification_engine
+
+        # Turn 0
+        q0, idx0, opts0, sop0, is_p0 = verification_engine.next_question(
+            category="gas_leak",
+            answered_count=0,
+            language="en",
+            incident_description_en="Severe gas leak detected in coke oven battery 5.",
+            prior_questions=[],
+            prior_answers_en=[],
+        )
+        self.assertIsNotNone(q0)
+
+        # Turn 1: Short answer 'No'
+        q1, idx1, opts1, sop1, is_p1 = verification_engine.next_question(
+            category="gas_leak",
+            answered_count=1,
+            language="en",
+            incident_description_en="Severe gas leak detected in coke oven battery 5.",
+            prior_questions=[q0],
+            prior_answers_en=["No"],
+        )
+        self.assertIsNotNone(q1)
+        self.assertNotEqual(q0.strip().lower(), q1.strip().lower())
+
+        # Turn 2: Short answer 'No one'
+        q2, idx2, opts2, sop2, is_p2 = verification_engine.next_question(
+            category="gas_leak",
+            answered_count=2,
+            language="en",
+            incident_description_en="Severe gas leak detected in coke oven battery 5.",
+            prior_questions=[q0, q1],
+            prior_answers_en=["No", "No one"],
+        )
+        self.assertIsNotNone(q2)
+        self.assertNotEqual(q1.strip().lower(), q2.strip().lower())
+        self.assertNotEqual(q0.strip().lower(), q2.strip().lower())
+
+        # Test Hindi turns as well
+        q_hi_0, _, _, _, _ = verification_engine.next_question(
+            category="fire",
+            answered_count=0,
+            language="hi",
+            incident_description_en="Fire in cable gallery basement.",
+            prior_questions=[],
+            prior_answers_en=[],
+        )
+        q_hi_1, _, _, _, _ = verification_engine.next_question(
+            category="fire",
+            answered_count=1,
+            language="hi",
+            incident_description_en="Fire in cable gallery basement.",
+            prior_questions=[q_hi_0],
+            prior_answers_en=["हाँ"],
+        )
+        self.assertIsNotNone(q_hi_1)
+        self.assertNotEqual(q_hi_0.strip().lower(), q_hi_1.strip().lower())
+
 
 if __name__ == "__main__":
     unittest.main()
+

@@ -74,22 +74,28 @@ def next_question(
         if answered_count >= 4:
             return None, answered_count, [], None, False
 
-    # 2. Static question bank fallback
+    # 2. Static question bank fallback: ensure no repeated questions from prior_q
     raw_list = _QUESTION_BANK.get(category, [])
-    if answered_count >= len(raw_list):
-        return None, len(raw_list), [], None, False
-    item = raw_list[answered_count]
-    if isinstance(item, dict):
-        q = item.get(language) or item.get("en") or ""
-        opts_data = item.get("options", {})
-        if isinstance(opts_data, dict):
-            opts = opts_data.get(language) or opts_data.get("en") or []
-        elif isinstance(opts_data, list):
-            opts = opts_data
+    for item in raw_list:
+        if isinstance(item, dict):
+            q = item.get(language) or item.get("en") or ""
+            opts_data = item.get("options", {})
+            if isinstance(opts_data, dict):
+                opts = opts_data.get(language) or opts_data.get("en") or []
+            elif isinstance(opts_data, list):
+                opts = opts_data
+            else:
+                opts = []
         else:
+            q = str(item)
             opts = []
+        if not q:
+            continue
+        q_norm = q.strip().lower()
+        if any(q_norm == pq.strip().lower() or q_norm in pq.strip().lower() or pq.strip().lower() in q_norm for pq in prior_q):
+            continue
         return q, answered_count, opts, None, False
-    return str(item), answered_count, [], None, False
+    return None, answered_count, [], None, False
 
 
 def find_english_option(
@@ -106,11 +112,37 @@ def find_english_option(
     """
     If the worker's answer matches a quick-option in ANY language (Tamil, Bengali, Hindi, etc.),
     maps it directly to the corresponding English option string.
-    Checks dynamic RAG options first, then falls back to static question bank options.
+    Checks checklist registry options first, then static question bank options, then dynamic RAG.
     """
     target = answer_text.strip().lower()
 
-    # 1. Check dynamic RAG options
+    # 1. Check checklist registry options first
+    from app.services import hazard_checklists
+    for item in hazard_checklists.INFORMATION_NEEDS_REGISTRY.get(category, []):
+        opts_dict = item.get("options", {})
+        en_opts = opts_dict.get("en", [])
+        for l_code, opts_list in opts_dict.items():
+            if isinstance(opts_list, list):
+                for i, opt in enumerate(opts_list):
+                    if opt.strip().lower() == target:
+                        if i < len(en_opts):
+                            return en_opts[i]
+
+    # 2. Check static question bank options across all questions in category
+    raw_list = _QUESTION_BANK.get(category, [])
+    for item in raw_list:
+        if isinstance(item, dict):
+            opts_data = item.get("options", {})
+            if isinstance(opts_data, dict):
+                en_opts = opts_data.get("en", [])
+                for lang_k, opts_list in opts_data.items():
+                    if isinstance(opts_list, list):
+                        for i, opt in enumerate(opts_list):
+                            if opt.strip().lower() == target:
+                                if i < len(en_opts):
+                                    return en_opts[i]
+
+    # 3. Check dynamic RAG options as fallback
     if incident_description_en or raw_description or prior_questions:
         res_native = rag_interview.generate_rag_question(
             category=category,
@@ -141,23 +173,6 @@ def find_english_option(
                 if opt.strip().lower() == target:
                     return opts_en[i]
 
-    # 2. Check static question bank options
-    raw_list = _QUESTION_BANK.get(category, [])
-    if question_idx >= len(raw_list):
-        return None
-    item = raw_list[question_idx]
-    if not isinstance(item, dict):
-        return None
-    opts_data = item.get("options", {})
-    if not isinstance(opts_data, dict):
-        return None
-    en_opts = opts_data.get("en", [])
-    for lang, opts_list in opts_data.items():
-        if isinstance(opts_list, list):
-            for i, opt in enumerate(opts_list):
-                if opt.strip().lower() == target:
-                    if i < len(en_opts):
-                        return en_opts[i]
     return None
 
 

@@ -84,12 +84,49 @@ class InterviewState:
         elif any(w in t_low for w in ["water dripping", "water near", "rain", "wet"]):
             self.filled_slots["water_exclusion_status"] = "water_contact_warning"
 
+    def _deduce_slot_from_question(self, question: str) -> str | None:
+        """Deduces the target slot from question text across registry and keywords."""
+        q_norm = question.strip().lower()
+        if not q_norm:
+            return None
+
+        # 1. Match against default_q across all registry items
+        for items in hazard_checklists.INFORMATION_NEEDS_REGISTRY.values():
+            for item in items:
+                for lang_q in item.get("default_q", {}).values():
+                    l_norm = lang_q.strip().lower()
+                    if l_norm == q_norm or l_norm in q_norm or q_norm in l_norm:
+                        return item["slot"]
+
+        # 2. Heuristic keywords from question
+        if any(k in q_norm for k in ["isolation valve", "gas supply", "safely closed", "valve", "आइसोलेशन", "वाल्व"]):
+            return "isolation_status"
+        if any(k in q_norm for k in ["unconscious", "dizziness", "trapped", "behoosh", "hurt", "injured", "बेहोश", "चक्कर", "फंसा"]):
+            return "victims_condition"
+        if any(k in q_norm for k in ["evacuated", "upwind", "assembly point", "हवा की विपरीत", "निकासी"]):
+            return "evacuation_status"
+        if any(k in q_norm for k in ["flames", "hot work", "engine", "ignition", "खुली आग", "वेल्डिंग"]):
+            return "ignition_source"
+        if any(k in q_norm for k in ["power", "de-energized", "breaker", "tripped", "बिजली", "ब्रेकर"]):
+            return "electrical_power_cut"
+        if any(k in q_norm for k in ["material", "burning", "cables", "transformer oil", "conveyor", "केबल"]):
+            return "material_involved"
+        if any(k in q_norm for k in ["water", "slag", "molten", "moisture", "पानी"]):
+            return "water_exclusion_status"
+        return None
+
     def record_turn(self, question: str, answer: str, slot_asked: str | None = None) -> None:
         """Records completed turn and extracts newly answered slots."""
         self.turn_count += 1
-        self.asked_questions.append(question)
-        if slot_asked:
-            self.asked_slots.add(slot_asked)
+        q_clean = question.strip()
+        self.asked_questions.append(q_clean)
+
+        deduced_slot = slot_asked or self._deduce_slot_from_question(q_clean)
+        if deduced_slot:
+            self.asked_slots.add(deduced_slot)
+            if answer and answer.strip() and deduced_slot not in self.filled_slots:
+                self.filled_slots[deduced_slot] = answer.strip()
+
         self._extract_slots_from_text(answer)
 
     def get_missing_priority_slots(self) -> list[dict[str, Any]]:
@@ -113,7 +150,7 @@ def generate_next_best_question(
     1. Identifying highest-priority missing slot.
     2. Grounding in retrieved SOP passage when available.
     3. Ensuring question is <= 25 words, single-sentence, non-leading, zero blame.
-    4. Guarding against repetition of answered slots.
+    4. Guarding against repetition of answered slots and already-asked questions.
 
     Returns:
     (question_text, options, sop_source, is_personalized, target_slot)
@@ -126,8 +163,43 @@ def generate_next_best_question(
         # All critical slots filled
         return None, [], None, False, None
 
-    target_item = missing_slots[0]
-    target_slot = target_item["slot"]
+    # Find the first missing slot whose default question text has not been asked yet
+    chosen_item = None
+    q_text = None
+    opts: list[str] = []
+    lang = state.language or "en"
+
+    for item in missing_slots:
+        slot_name = item["slot"]
+        if slot_name in state.asked_slots:
+            continue
+
+        q_dict = item.get("default_q", {})
+        cand_q = q_dict.get(lang) or q_dict.get("en")
+        if not cand_q:
+            continue
+
+        cand_norm = cand_q.strip().lower()
+        already_asked = any(
+            cand_norm == asked.strip().lower()
+            or cand_norm in asked.strip().lower()
+            or asked.strip().lower() in cand_norm
+            for asked in state.asked_questions
+        )
+        if already_asked:
+            state.asked_slots.add(slot_name)
+            continue
+
+        chosen_item = item
+        q_text = cand_q
+        opts_dict = item.get("options", {})
+        opts = opts_dict.get(lang) or opts_dict.get("en") or []
+        break
+
+    if not chosen_item or not q_text:
+        return None, [], None, False, None
+
+    target_slot = chosen_item["slot"]
 
     # 1. Perform structured RAG retrieval
     missing_slot_names = [item["slot"] for item in missing_slots]
@@ -148,15 +220,7 @@ def generate_next_best_question(
     top_chunk = chunks[0] if chunks else None
     sop_title = top_chunk["doc_title"] if top_chunk else "Standard Plant Safety Procedure"
 
-    # 2. Formulate targeted, non-leading question in worker's language
-    lang = state.language or "en"
-    q_dict = target_item["default_q"]
-    opts_dict = target_item.get("options", {})
-
-    q_text = q_dict.get(lang) or q_dict.get("en")
-    opts = opts_dict.get(lang) or opts_dict.get("en") or []
-
-    # 3. Quality Guard: Ensure <= 25 words and single question
+    # 2. Quality Guard: Ensure <= 25 words and single question
     words = q_text.strip().split()
     if len(words) > 25:
         q_text = " ".join(words[:24]) + "?"
