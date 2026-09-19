@@ -25,6 +25,7 @@ export const TicketResultScreen: React.FC<TicketResultScreenProps> = ({
   const verifiedSummary = report?.verified_summary;
   const threatLevel = report?.threat_level || 'HIGH PRIORITY';
   const recipients = report?.recipients || [];
+  const visualAnalysis = ticket.visual_analysis || report?.visual_analysis;
 
   React.useEffect(() => {
     const resolvePhoto = async () => {
@@ -78,8 +79,15 @@ export const TicketResultScreen: React.FC<TicketResultScreenProps> = ({
           <Text style={styles.cardHeader}>Verified Safety Facts</Text>
           <View style={styles.factRow}>
             <Text style={styles.factLabel}>Visual Confirmation:</Text>
-            <Text style={styles.factValue}>
-              {verifiedSummary?.observation_mode || 'Direct Observation'}
+            <Text style={[
+              styles.factValue,
+              visualAnalysis ? { color: visualAnalysis.is_valid_evidence ? '#34d399' : '#f59e0b' } : undefined
+            ]}>
+              {visualAnalysis
+                ? (visualAnalysis.is_valid_evidence
+                    ? `Confirmed (${visualAnalysis.detected_event?.replace(/_/g, ' ')})`
+                    : `Inconclusive (${visualAnalysis.detected_event?.replace(/_/g, ' ')} - Score Held Neutral)`)
+                : (verifiedSummary?.observation_mode || 'Direct Observation')}
             </Text>
           </View>
           <View style={styles.factRow}>
@@ -113,6 +121,55 @@ export const TicketResultScreen: React.FC<TicketResultScreenProps> = ({
               style={styles.photoProofImage}
               resizeMode="cover"
             />
+          </View>
+        )}
+
+        {/* AI Visual Verification Card */}
+        {visualAnalysis && (
+          <View style={[
+            styles.card,
+            visualAnalysis.is_valid_evidence ? styles.aiCardConfirmed : styles.aiCardInconclusive
+          ]}>
+            <View style={styles.aiHeaderRow}>
+              <Text style={styles.aiHeaderTitle}>🤖 AI Visual Analysis</Text>
+              <View style={[
+                styles.aiStatusBadge,
+                visualAnalysis.is_valid_evidence ? styles.aiBadgeConfirmed : styles.aiBadgeInconclusive
+              ]}>
+                <Text style={[
+                  styles.aiStatusBadgeText,
+                  visualAnalysis.is_valid_evidence ? styles.aiBadgeTextConfirmed : styles.aiBadgeTextInconclusive
+                ]}>
+                  {visualAnalysis.is_valid_evidence ? '✓ CONFIRMED' : '⚠️ INCONCLUSIVE'}
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.factRow}>
+              <Text style={styles.factLabel}>Detected Event:</Text>
+              <Text style={styles.factValue}>
+                {visualAnalysis.detected_event?.replace(/_/g, ' ').toUpperCase()}
+              </Text>
+            </View>
+            <View style={styles.factRow}>
+              <Text style={styles.factLabel}>Model Confidence:</Text>
+              <Text style={styles.factValue}>
+                {Math.round((visualAnalysis.confidence || 0) * 100)}%
+              </Text>
+            </View>
+            <View style={styles.factRow}>
+              <Text style={styles.factLabel}>Risk Score Impact:</Text>
+              <Text style={[
+                styles.factValue,
+                { color: visualAnalysis.is_valid_evidence ? '#34d399' : '#f59e0b' }
+              ]}>
+                {visualAnalysis.is_valid_evidence ? 'Elevated via visual proof' : 'Held neutral (NOT inflated)'}
+              </Text>
+            </View>
+
+            <Text style={styles.aiSummaryText}>
+              {visualAnalysis.visual_summary}
+            </Text>
           </View>
         )}
 
@@ -283,5 +340,60 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 14,
     fontWeight: '700',
+  },
+  aiCardConfirmed: {
+    borderColor: '#059669',
+    backgroundColor: 'rgba(6, 78, 59, 0.25)',
+  },
+  aiCardInconclusive: {
+    borderColor: '#d97706',
+    backgroundColor: 'rgba(120, 53, 15, 0.25)',
+  },
+  aiHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  aiHeaderTitle: {
+    color: '#38bdf8',
+    fontSize: 13,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  aiStatusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  aiBadgeConfirmed: {
+    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+    borderColor: '#10b981',
+  },
+  aiBadgeInconclusive: {
+    backgroundColor: 'rgba(245, 158, 11, 0.15)',
+    borderColor: '#f59e0b',
+  },
+  aiStatusBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  aiBadgeTextConfirmed: {
+    color: '#34d399',
+  },
+  aiBadgeTextInconclusive: {
+    color: '#fbbf24',
+  },
+  aiSummaryText: {
+    color: '#94a3b8',
+    fontSize: 12,
+    lineHeight: 18,
+    fontStyle: 'italic',
+    marginTop: 10,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.08)',
   },
 });

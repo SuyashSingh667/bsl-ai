@@ -32,6 +32,7 @@ def generate_incident_report(
     verification_questions: list[str] | None = None,
     verification_answers: list[str] | None = None,
     verification_answers_en: list[str] | None = None,
+    visual_analysis: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     # 1. Retrieve applicable BSL SOP chunks for procedural grounding
     query = f"{category} {zone_id or ''} {' '.join(findings.get('confirmed_equipment', []))} {' '.join(findings.get('reported_symptoms', []))}"
@@ -51,13 +52,20 @@ def generate_incident_report(
         threat_level = "ELEVATED / PENDING ON-SITE VERIFICATION"
 
     # 3. Format findings summary
-    obs_display = {
-        "visual_confirmed": "Confirmed (Direct Physical Observation)",
-        "both_seen_and_smelled": "Confirmed (Direct Visual & Olfactory Contact)",
-        "odor_only": "Suspected (Odor / Vapor Detected; No Visual Breach Identified)",
-        "uncertain": "Unconfirmed / Inconclusive",
-        "unspecified": "Unspecified in Report",
-    }.get(obs_mode, obs_mode)
+    if visual_analysis:
+        if visual_analysis.get("is_valid_evidence"):
+            obs_display = f"Confirmed by AI Vision ({visual_analysis['detected_event'].replace('_', ' ').title()} - {int(visual_analysis['confidence'] * 100)}% Confidence)"
+        else:
+            obs_display = f"Inconclusive ({visual_analysis['detected_event'].replace('_', ' ').title()} - Risk Score Not Inflated)"
+    else:
+        obs_display = {
+            "visual_confirmed": "Confirmed (Direct Physical Observation)",
+            "both_seen_and_smelled": "Confirmed (Direct Visual & Olfactory Contact)",
+            "odor_only": "Suspected (Odor / Vapor Detected; No Visual Breach Identified)",
+            "uncertain": "Unconfirmed / Inconclusive",
+            "inconclusive_unverified": "Inconclusive (No Matching Hazard in Photographic Evidence)",
+            "unspecified": "Unspecified in Report",
+        }.get(obs_mode, obs_mode)
 
     active_display = {
         True: "Active / Ongoing (Hazard Actively Releasing)",
@@ -185,6 +193,19 @@ def generate_incident_report(
             ])
         sec_idx += 1
 
+    # AI Visual Hazard Analysis (if image/video was analyzed by the model)
+    if visual_analysis:
+        md_lines.extend([
+            f"## {sec_idx}. 🤖 AI Visual Hazard Analysis",
+            f"- **Detected Visual Event:** `{visual_analysis.get('detected_event', 'Unspecified').replace('_', ' ').title()}`",
+            f"- **Model Confidence:** `{int(visual_analysis.get('confidence', 0.0) * 100)}%`",
+            f"- **Hazard Corroboration:** `{'CORROBORATED / VERIFIED' if visual_analysis.get('is_valid_evidence') else 'INCONCLUSIVE / UNCORRELATED'}`",
+            f"- **Calculated Risk Score Impact:** `{'Risk elevated based on verified visual evidence' if visual_analysis.get('is_valid_evidence') else 'Held neutral (NOT inflated to prevent false alarms)'}`",
+            f"- **Detailed Assessment:** *{visual_analysis.get('visual_summary', 'Analysis completed.')}*",
+            "",
+        ])
+        sec_idx += 1
+
     # Spatial Consequence & Workforce Exposure
     if impact and impact.get("applicable"):
         md_lines.extend([
@@ -231,6 +252,7 @@ def generate_incident_report(
         "threat_level": threat_level,
         "category_title": category_title,
         "photo_url": photo_url,
+        "visual_analysis": visual_analysis,
         "verified_summary": {
             "observation_mode": obs_display,
             "active_state": active_display,

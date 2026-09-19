@@ -57,6 +57,7 @@ class Ticket(Base):
     guidance_sources: Mapped[list] = mapped_column(JSON, default=list)
     guidance_audio_path: Mapped[str | None] = mapped_column(String, nullable=True)
     precautionary_measures: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    visual_analysis: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 
     status: Mapped[str] = mapped_column(String, default="open")
     resolution_notes: Mapped[str | None] = mapped_column(Text, nullable=True)

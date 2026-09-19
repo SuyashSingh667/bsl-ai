@@ -24,6 +24,7 @@ yarn-error.log*
 backend/data/audio/*.aiff
 backend/data/audio/*.wav
 backend/data/audio/*.mp3
+backend/data/audio/*.m4a
 backend/data/audio/*.webm
 backend/data/photos/*
 backend/data/*.db

@@ -27,6 +27,13 @@ export interface Ticket {
   guidance_text_native?: string;
   guidance_audio_path?: string;
   precautionary_measures?: any;
+  visual_analysis?: {
+    detected_event: string;
+    confidence: number;
+    is_valid_evidence: boolean;
+    visual_summary: string;
+    probabilities?: Record<string, number>;
+  };
   status?: string;
 }
 

@@ -61,6 +61,7 @@ class TicketOut(BaseModel):
     guidance_sources: list[dict[str, Any]] | None = Field(default_factory=list)
     guidance_audio_path: str | None = None
     precautionary_measures: dict[str, Any] | None = None
+    visual_analysis: dict[str, Any] | None = None
     status: str = "open"
     resolution_notes: str | None = None
     model_versions: dict[str, Any] | None = Field(default_factory=dict)

@@ -14,9 +14,21 @@ from app.services import (
     translation,
     tts,
     verification_engine,
+    visual_analysis,
 )
 
 router = APIRouter(prefix="/verification", tags=["verification"])
+
+
+def _attach_photo_url(ticket: Ticket) -> Ticket:
+    if ticket and ticket.photo_proof_path:
+        filename = Path(ticket.photo_proof_path).name
+        url = f"/photos/{filename}"
+        ticket.photo_url = url
+        ticket.media_url = url
+        ext = Path(ticket.photo_proof_path).suffix.lower()
+        ticket.media_type = "video" if ext in [".mp4", ".webm", ".mov", ".mkv", ".avi"] else "image"
+    return ticket
 
 
 def _get_ticket(ticket_id: str, db: Session) -> Ticket:
@@ -131,6 +143,7 @@ def submit_answer(ticket_id: str, payload: AnswerSubmit, db: Session = Depends(g
     db.add(ticket)
     db.commit()
     db.refresh(ticket)
+    _attach_photo_url(ticket)
     return ticket
 
 
@@ -141,6 +154,7 @@ def finalize(ticket_id: str, db: Session = Depends(get_db)):
     db.add(ticket)
     db.commit()
     db.refresh(ticket)
+    _attach_photo_url(ticket)
     return ticket
 
 
@@ -152,21 +166,52 @@ def _finalize(ticket: Ticket) -> None:
     )
     ticket.structured_findings = findings
 
+    # Check and run AI Visual Hazard Analysis if photo proof exists but not analyzed
+    if ticket.photo_proof_path and not ticket.visual_analysis:
+        try:
+            ticket.visual_analysis = visual_analysis.analyze_visual_evidence(
+                ticket.photo_proof_path, ticket.predicted_category
+            )
+        except Exception:
+            pass
+
     # 2. Evidence & Consistency Assessment
     score = findings.get("total_evidence_score", 0.5)
     obs_mode = findings.get("observation_mode", "unspecified")
-    if obs_mode in ["visual_confirmed", "both_seen_and_smelled"]:
-        status = "strongly_supported"
-        score = max(score, 0.75)
-    elif obs_mode == "odor_only":
-        status = "needs_verification"
-        score = min(max(score, 0.4), 0.65)
-    elif score >= 0.7:
-        status = "strongly_supported"
-    elif score >= 0.4:
-        status = "needs_verification"
+
+    # If worker provided photo proof, evaluate AI vision model verdict:
+    if ticket.visual_analysis:
+        v_analysis = ticket.visual_analysis
+        if v_analysis.get("is_valid_evidence"):
+            # Corroborated hazard: elevate score based on model confidence
+            score = max(score, round(0.75 + 0.15 * v_analysis.get("confidence", 0.8), 2))
+            status = "strongly_supported"
+        else:
+            # Unrelated / inconclusive image: KEEP SCORE NEUTRAL to prevent false alarms
+            if obs_mode in ["visual_confirmed", "both_seen_and_smelled"]:
+                # If they claimed visual confirmation but uploaded an unrelated photo,
+                # do not elevate score; cap it at needs_verification
+                score = min(score, 0.60)
+                status = "needs_verification"
+            elif score >= 0.7:
+                status = "strongly_supported"
+            elif score >= 0.4:
+                status = "needs_verification"
+            else:
+                status = "inconsistent_insufficient"
     else:
-        status = "inconsistent_insufficient"
+        if obs_mode in ["visual_confirmed", "both_seen_and_smelled"]:
+            status = "strongly_supported"
+            score = max(score, 0.75)
+        elif obs_mode == "odor_only":
+            status = "needs_verification"
+            score = min(max(score, 0.4), 0.65)
+        elif score >= 0.7:
+            status = "strongly_supported"
+        elif score >= 0.4:
+            status = "needs_verification"
+        else:
+            status = "inconsistent_insufficient"
 
     ticket.verification_score = round(score, 2)
     ticket.verification_status = status
@@ -204,6 +249,7 @@ def _finalize(ticket: Ticket) -> None:
         verification_questions=ticket.verification_questions,
         verification_answers=ticket.verification_answers,
         verification_answers_en=ticket.verification_answers_en,
+        visual_analysis=ticket.visual_analysis,
     )
     ticket.safety_report = report
     ticket.guidance_text = report["report_markdown"]
