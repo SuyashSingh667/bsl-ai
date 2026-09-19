@@ -36,9 +36,17 @@ Swapping the implementation later only touches this file;
 `to_english`/`from_english` is the interface everything else calls.
 """
 
+import functools
+import os
 import re
 
+import torch
 from transformers import MarianMTModel, MarianTokenizer
+
+try:
+    torch.set_num_threads(min(4, os.cpu_count() or 4))
+except Exception:
+    pass
 
 _MARKDOWN_BOLD_RE = re.compile(r"\*\*(.+?)\*\*")
 
@@ -50,6 +58,36 @@ _LANGUAGE_PAIR_MODELS = {
 }
 
 _MODEL_CACHE: dict[str, tuple[MarianMTModel, MarianTokenizer]] = {}
+
+# Fast-path exact translation dictionary for sub-millisecond dispatch and interview answers
+_EXACT_SAFETY_TRANSLATIONS: dict[str, str] = {
+    "हाँ": "Yes",
+    "हां": "Yes",
+    "नहीं": "No",
+    "नही": "No",
+    "ना": "No",
+    "पता नहीं": "Not sure / Unknown",
+    "मालूम नहीं": "Unknown",
+    "कोई नहीं": "No personnel",
+    "कोई घायल नहीं": "No one injured",
+    "कोई हताहत नहीं": "No casualties",
+    "सभी सुरक्षित": "All workers safe",
+    "सब सुरक्षित हैं": "All workers safe",
+    "सुरक्षित": "Safe",
+    "सुरक्षित है": "It is safe",
+    "बंद कर दिया": "Shut down / Isolated",
+    "बंद है": "Closed / Isolated",
+    "आइसोलेट कर दिया": "Safely isolated",
+    "वाल्व बंद है": "Valve closed",
+    "गैस लीक": "Gas leak",
+    "आग लगी है": "Fire has broken out",
+    "धुआं निकल रहा है": "Smoke emitting",
+    "खाली करा दिया": "Evacuated",
+    "मशीन बंद है": "Machine stopped",
+    "बिजली काट दी": "Power cut off",
+    "बिजली बंद है": "Power is shut off",
+    "मेन स्विच बंद": "Main breaker off",
+}
 
 
 _SAFETY_TERMS_TO_EN = {
@@ -235,9 +273,10 @@ def _get_model(source_lang: str, target_lang: str) -> tuple[MarianMTModel, Maria
 
 
 def _translate_line(text: str, model: MarianMTModel, tokenizer: MarianTokenizer) -> str:
-    inputs = tokenizer([text], return_tensors="pt", padding=True, truncation=True)
-    translated = model.generate(**inputs, max_new_tokens=256, num_beams=4)
-    return tokenizer.decode(translated[0], skip_special_tokens=True)
+    with torch.inference_mode():
+        inputs = tokenizer([text], return_tensors="pt", padding=True, truncation=True)
+        translated = model.generate(**inputs, max_new_tokens=64, num_beams=1)
+        return tokenizer.decode(translated[0], skip_special_tokens=True)
 
 
 def _dictionary_fallback(text: str) -> str:
@@ -263,29 +302,30 @@ def _translate(text: str, source_lang: str, target_lang: str) -> str:
 
     model, tokenizer = pair
 
-    # These MarianMT checkpoints are trained on sentence-level pairs, not
-    # multi-paragraph markdown. Feeding a whole guidance document through in
-    # one call made the model degenerate into a repeating loop (observed
-    # directly in testing, not a theoretical concern) — translating
-    # line-by-line keeps each call within the length/structure the model
-    # actually handles, and preserves the markdown line structure exactly.
+    # Short single sentence translation fast-path: avoids multiline overhead
+    clean_text = text.strip()
+    if "\n" not in clean_text:
+        clean_line = _MARKDOWN_BOLD_RE.sub(r"\1", clean_text)
+        return _translate_line(clean_line, model, tokenizer)
+
     lines = text.split("\n")
     translated_lines = []
     for line in lines:
         if not line.strip():
             translated_lines.append(line)
             continue
-        # "**bold**" markers specifically caused garbled/hallucinated output
-        # in testing (the model isn't trained on markdown) — strip them
-        # before translating. This loses the bold emphasis on the native-
-        # language side, which is an acceptable tradeoff for correctness;
-        # TTS playback doesn't voice the markers either way.
         clean_line = _MARKDOWN_BOLD_RE.sub(r"\1", line)
         translated_lines.append(_translate_line(clean_line, model, tokenizer))
     return "\n".join(translated_lines)
 
 
+@functools.lru_cache(maxsize=4096)
 def to_english(text: str, source_lang: str) -> str:
+    stripped = text.strip()
+    # 1. Fast-path exact safety dictionary check (sub-millisecond return)
+    if stripped in _EXACT_SAFETY_TRANSLATIONS:
+        return _EXACT_SAFETY_TRANSLATIONS[stripped]
+
     res = _translate(text, source_lang, "en")
     # Post-translation safety domain normalizations (correcting MarianMT literal translation misses)
     res = re.sub(r"\bpower\s+blow\b", "electric shock", res, flags=re.IGNORECASE)
@@ -302,9 +342,11 @@ def to_english(text: str, source_lang: str) -> str:
     return res
 
 
+@functools.lru_cache(maxsize=4096)
 def from_english(text: str, target_lang: str) -> str:
     return _translate(text, "en", target_lang)
 
 
 def is_supported(language: str) -> bool:
     return language == "en" or ("en", language) in _LANGUAGE_PAIR_MODELS
+

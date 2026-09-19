@@ -85,6 +85,29 @@ async def lifespan(app: FastAPI):
             except Exception:
                 pass
     rag.build_index()
+
+    # Pre-warm AI inference models & verification audio in background to eliminate cold-start delay
+    import threading
+
+    def _warmup_services():
+        import logging
+        log = logging.getLogger("app.warmup")
+        try:
+            from app.services import embeddings, classifier, translation, tts
+            # 1. Warm sentence transformer & profile vectors
+            classifier._get_profile_embeddings()
+            # 2. Warm MarianMT translation models
+            translation._get_model("hi", "en")
+            translation.to_english("ब्लास्ट फर्नेस में गैस रिसाव", "hi")
+            translation.to_english("हाँ", "hi")
+            # 3. Pre-cache verification questions audio
+            tts.precache_checklist_audio()
+            log.info("AI models & safety audio pre-warming completed.")
+        except Exception as exc:
+            log.warning(f"Model warm-up note: {exc}")
+
+    threading.Thread(target=_warmup_services, daemon=True).start()
+
     yield
 
 

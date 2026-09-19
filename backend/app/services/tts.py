@@ -177,3 +177,16 @@ def synthesize(text: str, language: str = "en") -> str:
 
     return ""
 
+
+def precache_checklist_audio() -> int:
+    """Pre-synthesizes standard verification checklist questions into disk cache for instant playback."""
+    from app.services import hazard_checklists
+    cached = 0
+    for items in hazard_checklists.INFORMATION_NEEDS_REGISTRY.values():
+        for item in items:
+            for lang, q_text in item.get("default_q", {}).items():
+                if q_text and lang in ["en", "hi"]:
+                    synthesize(q_text, lang)
+                    cached += 1
+    return cached
+
