@@ -1,0 +1,47 @@
+version: "3.8"
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: bsl-safety-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+      - PYTHONUNBUFFERED=1
+      - BSL_INFERENCE_MODE=${BSL_INFERENCE_MODE:-local_airgapped}
+      - BSL_DEFAULT_PLANT_ID=${BSL_DEFAULT_PLANT_ID:-bsl_bokaro}
+      - BSL_DATA_RETENTION_DAYS=${BSL_DATA_RETENTION_DAYS:-180}
+      - BSL_WEBHOOK_SECRET=${BSL_WEBHOOK_SECRET:-bsl-production-safety-secret-key-2026}
+      - BSL_DISPATCH_WEBHOOK_URL=${BSL_DISPATCH_WEBHOOK_URL:-}
+      - WHISPER_MODEL_SIZE=${WHISPER_MODEL_SIZE:-small}
+    volumes:
+      - bsl-backend-data:/app/backend/data
+      - ./backend/plants:/app/backend/plants
+      - ./spatial_impact:/app/spatial_impact
+      - ./rag_documents:/app/rag_documents
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: bsl-safety-frontend
+    restart: unless-stopped
+    ports:
+      - "5173:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  bsl-backend-data:
+    name: bsl-safety-data

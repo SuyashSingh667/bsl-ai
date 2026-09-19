@@ -6,7 +6,18 @@ from fastapi.staticfiles import StaticFiles
 
 from app.config import AUDIO_UPLOAD_DIR, PHOTO_UPLOAD_DIR
 from app.database import Base, engine
-from app.routers import guidance, incidents, similar_incidents, tickets, transcription, translate, tts, verification
+from app.routers import (
+    admin,
+    guidance,
+    incidents,
+    integrations,
+    similar_incidents,
+    tickets,
+    transcription,
+    translate,
+    tts,
+    verification,
+)
 from app.services import rag
 
 AUDIO_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
@@ -35,6 +46,7 @@ async def lifespan(app: FastAPI):
         except Exception:
             pass
         for col_def in [
+            "plant_id VARCHAR DEFAULT 'bsl_bokaro'",
             "reporting_mode VARCHAR DEFAULT 'personal'",
             "reporter_supervisor_id VARCHAR",
             "worker_badge_id VARCHAR",
@@ -67,6 +79,8 @@ app.include_router(verification.router)
 app.include_router(guidance.router)
 app.include_router(tickets.router)
 app.include_router(similar_incidents.router)
+app.include_router(admin.router)
+app.include_router(integrations.router)
 
 app.mount("/audio", StaticFiles(directory=str(AUDIO_UPLOAD_DIR)), name="audio")
 app.mount("/photos", StaticFiles(directory=str(PHOTO_UPLOAD_DIR)), name="photos")

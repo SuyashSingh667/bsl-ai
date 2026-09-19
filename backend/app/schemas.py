@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field
 
 
 class IncidentCreate(BaseModel):
+    plant_id: str = "bsl_bokaro"
     report_type: str = Field(pattern="^(suspected|emergency)$")
     incident_description: str
     employee_id: str | None = None
@@ -32,6 +33,7 @@ class TicketUpdate(BaseModel):
 
 class TicketOut(BaseModel):
     id: str
+    plant_id: str = "bsl_bokaro"
     created_at: datetime
     updated_at: datetime
     employee_id: str | None
@@ -122,3 +124,44 @@ class TTSRequest(BaseModel):
 
 class TTSResponse(BaseModel):
     audio_path: str
+
+
+class AuditLogOut(BaseModel):
+    id: str
+    plant_id: str
+    ticket_id: str | None = None
+    actor_id: str
+    actor_role: str
+    action: str
+    previous_state: dict[str, Any] | None = None
+    new_state: dict[str, Any] | None = None
+    details: dict[str, Any] = Field(default_factory=dict)
+    created_at: datetime
+    prev_entry_hash: str | None = None
+    entry_hash: str
+
+    model_config = {"from_attributes": True}
+
+
+class PlantZoneDefinition(BaseModel):
+    zone_id: str
+    name: str
+    category: str
+    hazard_class: list[str] = Field(default_factory=list)
+    footprint_radius_m: float = 80.0
+    occupancy: dict[str, int] | None = None
+    centroid: dict[str, float] = Field(default_factory=lambda: {"x": 0.0, "y": 0.0})
+    phone_restricted: bool = False
+    intrinsically_safe_only: bool = False
+    safe_alternative: str | None = None
+
+
+class EmergencyTeamDefinition(BaseModel):
+    team_id: str
+    name: str
+    phone: str
+    sms: str | None = None
+    whatsapp: str | None = None
+    radio_channel: str | None = None
+    coverage_zones: list[str] = Field(default_factory=lambda: ["ALL"])
+

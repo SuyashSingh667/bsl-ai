@@ -19,6 +19,7 @@ class Ticket(Base):
     __tablename__ = "tickets"
 
     id: Mapped[str] = mapped_column(String, primary_key=True, default=_uuid)
+    plant_id: Mapped[str] = mapped_column(String, default="bsl_bokaro", index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)
 
@@ -72,3 +73,21 @@ class Ticket(Base):
     ai_audit_trail: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 
     model_versions: Mapped[dict] = mapped_column(JSON, default=dict)
+
+
+class AuditLog(Base):
+    __tablename__ = "audit_logs"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=_uuid)
+    plant_id: Mapped[str] = mapped_column(String, default="bsl_bokaro", index=True)
+    ticket_id: Mapped[str | None] = mapped_column(String, nullable=True, index=True)
+    actor_id: Mapped[str] = mapped_column(String, default="SYSTEM")
+    actor_role: Mapped[str] = mapped_column(String, default="system")  # "worker" | "supervisor" | "safety_officer" | "control_room" | "admin"
+    action: Mapped[str] = mapped_column(String, index=True)
+    previous_state: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    new_state: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    details: Mapped[dict] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, index=True)
+    prev_entry_hash: Mapped[str | None] = mapped_column(String, nullable=True)
+    entry_hash: Mapped[str] = mapped_column(String, index=True)
+

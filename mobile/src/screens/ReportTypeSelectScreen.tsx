@@ -48,7 +48,7 @@ export const ReportTypeSelect: React.FC<ReportTypeSelectProps> = ({
       <View style={styles.header}>
         <View style={styles.headerTopRow}>
           <View style={styles.badge}>
-            <Text style={styles.badgeText}>🏭 BOKARO STEEL PLANT</Text>
+            <Text style={styles.badgeText}>🏭 INDUSTRIAL SAFETY PLATFORM</Text>
           </View>
           {/* Outbox Status Indicator */}
           <TouchableOpacity
@@ -141,6 +141,17 @@ export const ReportTypeSelect: React.FC<ReportTypeSelectProps> = ({
       <TouchableOpacity style={styles.kioskModeButton} onPress={onOpenKiosk}>
         <Text style={styles.kioskModeText}>🏢 Switch to Shared Kiosk / Terminal Mode</Text>
       </TouchableOpacity>
+
+      {/* On-Screen Worker Privacy & Biometric Prohibition Consent */}
+      <View style={styles.consentNoticeBox}>
+        <Text style={styles.consentNoticeTitle}>🔒 Worker Data Privacy & Consent</Text>
+        <Text style={styles.consentNoticeTextEn}>
+          Voice recordings are processed solely for incident transcription and emergency dispatch. No biometric voice-printing or speaker profiling is performed. Retention is governed by factory safety compliance policies.
+        </Text>
+        <Text style={styles.consentNoticeTextHi}>
+          आवाज रिकॉर्डिंग का उपयोग केवल आपातकालीन ट्रांसक्रिप्शन के लिए किया जाता है। कोई बायोमेट्रिक वॉयस-प्रिंटिंग या वक्ता पहचान नहीं की जाती है।
+        </Text>
+      </View>
 
       {/* Settings / Server Config Button */}
       <TouchableOpacity style={styles.settingsButton} onPress={onOpenSettings}>
@@ -354,6 +365,32 @@ const styles = StyleSheet.create({
     color: '#38bdf8',
     fontSize: 13,
     fontWeight: '800',
+  },
+  consentNoticeBox: {
+    backgroundColor: 'rgba(15, 23, 42, 0.7)',
+    borderWidth: 1,
+    borderColor: 'rgba(148, 163, 184, 0.25)',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 16,
+  },
+  consentNoticeTitle: {
+    color: '#e2e8f0',
+    fontSize: 11,
+    fontWeight: '700',
+    marginBottom: 4,
+    letterSpacing: 0.5,
+  },
+  consentNoticeTextEn: {
+    color: '#94a3b8',
+    fontSize: 10,
+    lineHeight: 14,
+    marginBottom: 4,
+  },
+  consentNoticeTextHi: {
+    color: '#cbd5e1',
+    fontSize: 10,
+    lineHeight: 14,
   },
   settingsButton: {
     alignSelf: 'center',

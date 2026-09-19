@@ -6,10 +6,12 @@ import VerificationInterview from "./components/VerificationInterview";
 import PrecautionaryMeasuresModal from "./components/PrecautionaryMeasuresModal";
 import TicketResult from "./components/TicketResult";
 import Dashboard from "./components/Dashboard";
+import AdminOnboarding from "./components/AdminOnboarding";
 import "./App.css";
 
 export default function App() {
-  const [view, setView] = useState("worker"); // "worker" | "dashboard"
+  const [view, setView] = useState("worker"); // "worker" | "dashboard" | "admin"
+  const [activePlantId, setActivePlantId] = useState("bsl_bokaro");
   const [step, setStep] = useState("select");
   const [reportType, setReportType] = useState(null);
   const [ticketId, setTicketId] = useState(null);
@@ -77,12 +79,24 @@ export default function App() {
           >
             📋 Safety Officer Dashboard
           </button>
+          <button
+            className={`nav-tab ${view === "admin" ? "active" : ""}`}
+            onClick={() => setView("admin")}
+          >
+            ⚙️ Plant Admin & Onboarding
+          </button>
         </nav>
       </header>
 
       {/* Main Container */}
       <main className="main-content">
-        {view === "dashboard" && <Dashboard />}
+        {view === "admin" && (
+          <AdminOnboarding
+            activePlantId={activePlantId}
+            onSelectPlant={(pId) => setActivePlantId(pId)}
+          />
+        )}
+        {view === "dashboard" && <Dashboard plantId={activePlantId} />}
 
         {view === "worker" && (
           <div className="app">

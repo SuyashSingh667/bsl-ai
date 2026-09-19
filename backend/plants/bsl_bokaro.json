@@ -1,0 +1,274 @@
+{
+  "plant_id": "bsl_bokaro",
+  "name": "Bokaro Steel Limited",
+  "short_name": "BSL",
+  "organization": "Steel Authority of India Limited (SAIL)",
+  "location": "Bokaro Steel City, Jharkhand, India",
+  "timezone": "Asia/Kolkata",
+  "emergency_hotline": "+916542280000",
+  "control_room_channel": "VHF-CH-04",
+  "data_retention_days": 180,
+  "intrinsically_safe_required_zones": ["BF1", "GHS", "COB", "SMS2"],
+  "emergency_teams": [
+    {
+      "team_id": "fire_brigade",
+      "name": "Plant Central Fire Brigade",
+      "phone": "+916542280101",
+      "sms": "+916542280101",
+      "whatsapp": "+919431100101",
+      "radio_channel": "CH-01 (Fire)",
+      "coverage_zones": ["ALL"]
+    },
+    {
+      "team_id": "gas_safety_squad",
+      "name": "Gas Safety & Rescue Squad (BFG/COG)",
+      "phone": "+916542280202",
+      "sms": "+916542280202",
+      "whatsapp": "+919431100202",
+      "radio_channel": "CH-02 (Gas Rescue)",
+      "coverage_zones": ["BF1", "GHS", "COB", "SMS2"]
+    },
+    {
+      "team_id": "medical_ambulance",
+      "name": "BSL Occupational Health & Ambulance",
+      "phone": "+916542280303",
+      "sms": "+916542280303",
+      "whatsapp": "+919431100303",
+      "radio_channel": "CH-03 (Ambulance)",
+      "coverage_zones": ["ALL"]
+    },
+    {
+      "team_id": "cisf_security",
+      "name": "CISF Plant Security & Evacuation",
+      "phone": "+916542280404",
+      "sms": "+916542280404",
+      "whatsapp": "+919431100404",
+      "radio_channel": "CH-04 (Security)",
+      "coverage_zones": ["ALL"]
+    },
+    {
+      "team_id": "electrical_rescue",
+      "name": "High Voltage Electrical Isolation Squad",
+      "phone": "+916542280505",
+      "sms": "+916542280505",
+      "whatsapp": "+919431100505",
+      "radio_channel": "CH-05 (Electrical)",
+      "coverage_zones": ["PWR", "BF1", "SMS2", "CRM"]
+    }
+  ],
+  "critical_assets": [
+    {
+      "asset_id": "BF-01",
+      "name": "Blast Furnace No. 1 (Parvati)",
+      "zone_id": "BF1",
+      "type": "blast_furnace",
+      "operating_volume_m3": 2250,
+      "tuyere_count": 24,
+      "taphole_count": 2,
+      "loto_isolation_point": "LOTO-BF1-MAIN"
+    },
+    {
+      "asset_id": "GHS-HOLDER-01",
+      "name": "BF Gas Holder 100,000 m³",
+      "zone_id": "GHS",
+      "type": "gas_holder",
+      "capacity_m3": 100000,
+      "pressure_kpa": 12.5,
+      "loto_isolation_point": "LOTO-GHS-INLET-V12"
+    },
+    {
+      "asset_id": "SMS-CONV-01",
+      "name": "LD Converter No. 1",
+      "zone_id": "SMS2",
+      "type": "ld_converter",
+      "heat_capacity_tons": 300,
+      "loto_isolation_point": "LOTO-SMS-O2-LINE"
+    },
+    {
+      "asset_id": "PWR-BOILER-04",
+      "name": "High Pressure Steam Boiler No. 4",
+      "zone_id": "PWR",
+      "type": "boiler",
+      "operating_pressure_bar": 90,
+      "loto_isolation_point": "LOTO-PWR-STM-90"
+    }
+  ],
+  "gas_pipelines": [
+    {
+      "pipeline_id": "PL-BFG-01",
+      "name": "Blast Furnace Gas Ring Main",
+      "medium": "BF Gas (28% CO, Highly Toxic / Flammable)",
+      "operating_pressure_bar": 0.25,
+      "diameter_mm": 2400,
+      "start_zone": "BF1",
+      "end_zone": "GHS",
+      "isolation_valves": ["V-BFG-01", "V-BFG-04", "V-BFG-12"]
+    },
+    {
+      "pipeline_id": "PL-COG-01",
+      "name": "Coke Oven Gas Distribution Line",
+      "medium": "Coke Oven Gas (55% H2, 25% CH4, 6% CO, Explosive)",
+      "operating_pressure_bar": 0.45,
+      "diameter_mm": 1800,
+      "start_zone": "COB",
+      "end_zone": "PWR",
+      "isolation_valves": ["V-COG-02", "V-COG-07"]
+    },
+    {
+      "pipeline_id": "PL-O2-01",
+      "name": "High Pressure Oxygen Header to SMS",
+      "medium": "Gaseous Oxygen (99.6% O2, Intense Fire Hazard)",
+      "operating_pressure_bar": 30.0,
+      "diameter_mm": 600,
+      "start_zone": "OXY",
+      "end_zone": "SMS2",
+      "isolation_valves": ["V-O2-MAIN", "V-O2-SMS-SHUT"]
+    }
+  ],
+  "transformers": [
+    {
+      "transformer_id": "TR-PWR-220-01",
+      "name": "Main Grid Interconnect Transformer 220/33kV",
+      "zone_id": "PWR",
+      "rating_mva": 150,
+      "primary_voltage_kv": 220,
+      "secondary_voltage_kv": 33,
+      "cooling_type": "ONAF",
+      "fire_suppression": "Deluge Water Spray System",
+      "loto_breaker_id": "CB-220-01"
+    },
+    {
+      "transformer_id": "TR-BF1-33-01",
+      "name": "Blast Furnace 1 Blower Substation Transformer",
+      "zone_id": "BF1",
+      "rating_mva": 25,
+      "primary_voltage_kv": 33,
+      "secondary_voltage_kv": 6.6,
+      "cooling_type": "ONAN",
+      "fire_suppression": "Nitrogen Injection Fire Prevention (NIFPS)",
+      "loto_breaker_id": "CB-BF1-33-04"
+    }
+  ],
+  "zones": [
+    {
+      "zone_id": "RMY",
+      "name": "Raw Material Yard",
+      "category": "raw_material",
+      "hazard_class": ["dust", "mechanical"],
+      "footprint_radius_m": 150,
+      "occupancy": {"day": 12, "night": 6},
+      "centroid": {"x": 0, "y": 0},
+      "phone_restricted": false,
+      "intrinsically_safe_only": false,
+      "safe_alternative": null
+    },
+    {
+      "zone_id": "COB",
+      "name": "Coke Oven Battery & By-Product Plant",
+      "category": "hot_process",
+      "hazard_class": ["toxic_gas", "explosion", "fire", "high_heat"],
+      "footprint_radius_m": 120,
+      "occupancy": {"day": 25, "night": 15},
+      "centroid": {"x": 400, "y": 0},
+      "phone_restricted": true,
+      "intrinsically_safe_only": true,
+      "safe_alternative": "Use Gas Marshall Kiosk Station KSK-COB-01 or Intercom at Battery Control Pulpit"
+    },
+    {
+      "zone_id": "SIN",
+      "name": "Sinter Plant",
+      "category": "hot_process",
+      "hazard_class": ["dust", "high_heat", "fumes"],
+      "footprint_radius_m": 100,
+      "occupancy": {"day": 18, "night": 10},
+      "centroid": {"x": 750, "y": 50},
+      "phone_restricted": false,
+      "intrinsically_safe_only": false,
+      "safe_alternative": null
+    },
+    {
+      "zone_id": "BF1",
+      "name": "Blast Furnace 1",
+      "category": "hot_process",
+      "hazard_class": ["toxic_gas", "molten_metal", "explosion", "high_heat"],
+      "footprint_radius_m": 80,
+      "occupancy": {"day": 30, "night": 20},
+      "centroid": {"x": 1100, "y": 0},
+      "phone_restricted": true,
+      "intrinsically_safe_only": true,
+      "safe_alternative": "Use Blast Shelter 1 Intercom / Kiosk KSK-BF1-01 (Intrinsically Safe ATEX Zone 1 Certified)"
+    },
+    {
+      "zone_id": "BF2",
+      "name": "Blast Furnace 2",
+      "category": "hot_process",
+      "hazard_class": ["toxic_gas", "molten_metal", "explosion", "high_heat"],
+      "footprint_radius_m": 80,
+      "occupancy": {"day": 28, "night": 18},
+      "centroid": {"x": 1300, "y": 0},
+      "phone_restricted": true,
+      "intrinsically_safe_only": true,
+      "safe_alternative": "Use Casthouse Intercom Station KSK-BF2-01"
+    },
+    {
+      "zone_id": "GHS",
+      "name": "Gas Holder Station",
+      "category": "gas_storage",
+      "hazard_class": ["toxic_gas", "explosion"],
+      "footprint_radius_m": 60,
+      "occupancy": {"day": 4, "night": 2},
+      "centroid": {"x": 1200, "y": 300},
+      "phone_restricted": true,
+      "intrinsically_safe_only": true,
+      "safe_alternative": "Personal devices strictly forbidden. Report from Gas Booster Control Room Landline ext. 4412"
+    },
+    {
+      "zone_id": "SMS2",
+      "name": "Steel Melting Shop II",
+      "category": "hot_process",
+      "hazard_class": ["molten_metal", "explosion", "crane_hazard", "high_heat"],
+      "footprint_radius_m": 130,
+      "occupancy": {"day": 35, "night": 22},
+      "centroid": {"x": 1700, "y": 0},
+      "phone_restricted": true,
+      "intrinsically_safe_only": true,
+      "safe_alternative": "Use Crane Pulpit Intercom or Kiosk KSK-SMS2-01"
+    },
+    {
+      "zone_id": "PWR",
+      "name": "Bokaro Works Power Plant",
+      "category": "utility_power",
+      "hazard_class": ["fire", "high_heat", "boiler_explosion"],
+      "footprint_radius_m": 150,
+      "occupancy": {"day": 20, "night": 12},
+      "centroid": {"x": 2000, "y": 1400},
+      "phone_restricted": false,
+      "intrinsically_safe_only": false,
+      "safe_alternative": null
+    },
+    {
+      "zone_id": "CRM",
+      "name": "Cold Rolling Mill",
+      "category": "mill",
+      "hazard_class": ["chemical", "mechanical", "fire"],
+      "footprint_radius_m": 110,
+      "occupancy": {"day": 30, "night": 16},
+      "centroid": {"x": 4450, "y": -20},
+      "phone_restricted": false,
+      "intrinsically_safe_only": false,
+      "safe_alternative": null
+    },
+    {
+      "zone_id": "TOWNSHIP",
+      "name": "Bokaro Steel City Township (Boundary)",
+      "category": "civilian",
+      "hazard_class": [],
+      "footprint_radius_m": 50,
+      "occupancy": null,
+      "centroid": {"x": 5200, "y": -250},
+      "phone_restricted": false,
+      "intrinsically_safe_only": false,
+      "safe_alternative": null
+    }
+  ]
+}

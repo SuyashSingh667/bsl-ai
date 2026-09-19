@@ -1,0 +1,140 @@
+{
+  "plant_id": "rsp_rourkela",
+  "name": "Rourkela Steel Plant",
+  "short_name": "RSP",
+  "organization": "Steel Authority of India Limited (SAIL)",
+  "location": "Rourkela, Sundargarh District, Odisha, India",
+  "timezone": "Asia/Kolkata",
+  "emergency_hotline": "+916612510000",
+  "control_room_channel": "VHF-CH-09",
+  "data_retention_days": 365,
+  "intrinsically_safe_required_zones": ["BF5", "RSP_GHS", "SMS1"],
+  "emergency_teams": [
+    {
+      "team_id": "fire_brigade",
+      "name": "RSP Fire Services Command",
+      "phone": "+916612510101",
+      "sms": "+916612510101",
+      "whatsapp": "+919437000101",
+      "radio_channel": "CH-01 (Fire)",
+      "coverage_zones": ["ALL"]
+    },
+    {
+      "team_id": "gas_safety_squad",
+      "name": "RSP Gas Safety & Environmental Squad",
+      "phone": "+916612510202",
+      "sms": "+916612510202",
+      "whatsapp": "+919437000202",
+      "radio_channel": "CH-02 (Gas Safety)",
+      "coverage_zones": ["BF5", "RSP_GHS", "SMS1"]
+    },
+    {
+      "team_id": "medical_ambulance",
+      "name": "Ispat General Hospital (IGH) Emergency Mobile Unit",
+      "phone": "+916612510303",
+      "sms": "+916612510303",
+      "whatsapp": "+919437000303",
+      "radio_channel": "CH-03 (Ambulance)",
+      "coverage_zones": ["ALL"]
+    }
+  ],
+  "critical_assets": [
+    {
+      "asset_id": "BF-05-DURGA",
+      "name": "Blast Furnace No. 5 (Durga - 4060 m³)",
+      "zone_id": "BF5",
+      "type": "blast_furnace",
+      "operating_volume_m3": 4060,
+      "tuyere_count": 32,
+      "taphole_count": 4,
+      "loto_isolation_point": "LOTO-RSP-BF5-MAIN"
+    }
+  ],
+  "gas_pipelines": [
+    {
+      "pipeline_id": "PL-RSP-BFG-01",
+      "name": "RSP BF-5 Main Export Header",
+      "medium": "BF Gas (CO mixture)",
+      "operating_pressure_bar": 0.3,
+      "diameter_mm": 2600,
+      "start_zone": "BF5",
+      "end_zone": "RSP_GHS",
+      "isolation_valves": ["V-RSP-01", "V-RSP-05"]
+    }
+  ],
+  "transformers": [
+    {
+      "transformer_id": "TR-RSP-400-01",
+      "name": "RSP Grid Interconnect 400/220kV Transformer",
+      "zone_id": "RSP_PWR",
+      "rating_mva": 315,
+      "primary_voltage_kv": 400,
+      "secondary_voltage_kv": 220,
+      "cooling_type": "OFAF",
+      "fire_suppression": "High Velocity Water Spray",
+      "loto_breaker_id": "CB-RSP-400-01"
+    }
+  ],
+  "zones": [
+    {
+      "zone_id": "BF5",
+      "name": "Blast Furnace 5 (Durga)",
+      "category": "hot_process",
+      "hazard_class": ["toxic_gas", "molten_metal", "explosion", "high_heat"],
+      "footprint_radius_m": 120,
+      "occupancy": {"day": 40, "night": 25},
+      "centroid": {"x": 500, "y": 200},
+      "phone_restricted": true,
+      "intrinsically_safe_only": true,
+      "safe_alternative": "Use Durga Casthouse Bunker Intercom KSK-RSP-BF5"
+    },
+    {
+      "zone_id": "RSP_GHS",
+      "name": "RSP Gas Storage & Distribution Station",
+      "category": "gas_storage",
+      "hazard_class": ["toxic_gas", "explosion"],
+      "footprint_radius_m": 80,
+      "occupancy": {"day": 6, "night": 3},
+      "centroid": {"x": 900, "y": 400},
+      "phone_restricted": true,
+      "intrinsically_safe_only": true,
+      "safe_alternative": "Gas Control Room Station Landline ext. 5521"
+    },
+    {
+      "zone_id": "SMS1",
+      "name": "Steel Melting Shop 1",
+      "category": "hot_process",
+      "hazard_class": ["molten_metal", "explosion", "crane_hazard"],
+      "footprint_radius_m": 140,
+      "occupancy": {"day": 35, "night": 20},
+      "centroid": {"x": 1200, "y": 100},
+      "phone_restricted": true,
+      "intrinsically_safe_only": true,
+      "safe_alternative": "SMS Central Pulpit Kiosk KSK-RSP-SMS1"
+    },
+    {
+      "zone_id": "RSP_PWR",
+      "name": "RSP Captive Power Plant CPP-1",
+      "category": "utility_power",
+      "hazard_class": ["fire", "high_heat"],
+      "footprint_radius_m": 130,
+      "occupancy": {"day": 20, "night": 10},
+      "centroid": {"x": 1600, "y": 500},
+      "phone_restricted": false,
+      "intrinsically_safe_only": false,
+      "safe_alternative": null
+    },
+    {
+      "zone_id": "CIVIL_SECTOR",
+      "name": "Rourkela Sector 1 Township Perimeter",
+      "category": "civilian",
+      "hazard_class": [],
+      "footprint_radius_m": 60,
+      "occupancy": null,
+      "centroid": {"x": 3000, "y": -300},
+      "phone_restricted": false,
+      "intrinsically_safe_only": false,
+      "safe_alternative": null
+    }
+  ]
+}

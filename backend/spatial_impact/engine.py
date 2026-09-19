@@ -14,8 +14,13 @@ def distance(a, b):
     return math.hypot(a["x"] - b["x"], a["y"] - b["y"])
 
 
-def estimate_impact(incident_zone_id, incident_type, occupancy_period="day", zones=None, hazard_config=None):
-    zones = zones or load_json("zones.json")["zones"]
+def estimate_impact(incident_zone_id, incident_type, occupancy_period="day", zones=None, hazard_config=None, plant_id=None):
+    if zones is None:
+        try:
+            from app.services.plant_manager import get_plant_zones
+            zones = get_plant_zones(plant_id or "bsl_bokaro")
+        except Exception:
+            zones = load_json("zones.json")["zones"]
     hazard_config = hazard_config or load_json("hazard_bands.json")
 
     if incident_type in hazard_config["not_applicable"]:

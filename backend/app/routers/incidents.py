@@ -104,6 +104,7 @@ def _create_ticket(
     reporter_supervisor_id: str | None = None,
     worker_badge_id: str | None = None,
     kiosk_station_id: str | None = None,
+    plant_id: str = "bsl_bokaro",
 ) -> Ticket:
     detected_from_text = detect_language_from_text(text)
     effective_lang = language or detected_from_text
@@ -129,7 +130,7 @@ def _create_ticket(
         ext = Path(photo_proof_path).suffix.lower()
         media_type = "video" if ext in [".mp4", ".webm", ".mov", ".mkv", ".avi"] else "image"
 
-    impact = spatial_impact.assess(effective_zone, category)
+    impact = spatial_impact.assess(effective_zone, category, plant_id=plant_id)
     is_emergency = _is_acute_emergency(report_type, category, text, text_en, impact)
 
     # FAST-PATH DISPATCH LOGIC:
@@ -150,6 +151,7 @@ def _create_ticket(
         routing_tier = routing.route(effective_report_type, initial_risk, impact)
 
     ticket = Ticket(
+        plant_id=plant_id,
         employee_id=employee_id,
         reporting_mode=reporting_mode,
         reporter_supervisor_id=reporter_supervisor_id,
@@ -221,6 +223,35 @@ def _create_ticket(
     db.add(ticket)
     db.commit()
     db.refresh(ticket)
+
+    # Immutable Audit Log record
+    try:
+        from app.services import audit_logger
+        audit_logger.log_event(
+            db=db,
+            action="INCIDENT_CREATED",
+            plant_id=ticket.plant_id,
+            ticket_id=ticket.id,
+            actor_id=worker_badge_id or employee_id or "ANON_WORKER",
+            actor_role=reporting_mode,
+            details={
+                "category": category,
+                "report_type": effective_report_type,
+                "routing_tier": routing_tier,
+                "zone_id": effective_zone,
+            },
+        )
+    except Exception:
+        pass
+
+    # Multi-channel integration dispatch for acute emergency alerts
+    if is_emergency or routing_tier == "emergency_authority":
+        try:
+            from app.services import integration_dispatcher
+            integration_dispatcher.dispatch_incident_notifications(ticket, plant_id=ticket.plant_id)
+        except Exception:
+            pass
+
     if ticket.photo_proof_path:
         url = f"/photos/{Path(ticket.photo_proof_path).name}"
         ticket.photo_url = url
@@ -241,6 +272,7 @@ def create_incident(payload: IncidentCreate, db: Session = Depends(get_db)):
         reporter_supervisor_id=payload.reporter_supervisor_id,
         worker_badge_id=payload.worker_badge_id,
         kiosk_station_id=payload.kiosk_station_id,
+        plant_id=payload.plant_id,
     )
 
 
@@ -256,6 +288,7 @@ def create_incident_from_audio(
     reporter_supervisor_id: str | None = Form(None),
     worker_badge_id: str | None = Form(None),
     kiosk_station_id: str | None = Form(None),
+    plant_id: str = Form("bsl_bokaro"),
     db: Session = Depends(get_db),
 ):
     dest = AUDIO_UPLOAD_DIR / f"{uuid.uuid4().hex[:12]}_{file.filename}"
@@ -297,5 +330,6 @@ def create_incident_from_audio(
         reporter_supervisor_id=reporter_supervisor_id,
         worker_badge_id=worker_badge_id,
         kiosk_station_id=kiosk_station_id,
+        plant_id=plant_id,
     )
 

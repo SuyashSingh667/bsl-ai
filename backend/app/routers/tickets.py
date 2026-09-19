@@ -29,8 +29,15 @@ def _attach_photo_url(ticket: Ticket) -> Ticket:
 
 
 @router.get("", response_model=list[TicketOut])
-def list_tickets(routing_tier: str | None = None, status: str | None = None, db: Session = Depends(get_db)):
+def list_tickets(
+    plant_id: str | None = None,
+    routing_tier: str | None = None,
+    status: str | None = None,
+    db: Session = Depends(get_db),
+):
     stmt = select(Ticket).order_by(Ticket.created_at.desc())
+    if plant_id:
+        stmt = stmt.where(Ticket.plant_id == plant_id)
     if routing_tier:
         stmt = stmt.where(Ticket.routing_tier == routing_tier)
     if status:
@@ -147,6 +154,25 @@ def upload_photo(
     db.commit()
     db.refresh(ticket)
     _attach_photo_url(ticket)
+
+    try:
+        from app.services import audit_logger
+        audit_logger.log_event(
+            db=db,
+            action="VISUAL_EVIDENCE_ATTACHED",
+            plant_id=ticket.plant_id,
+            ticket_id=ticket.id,
+            actor_id="SAFETY_OPERATOR",
+            actor_role="safety_officer",
+            details={
+                "media_type": media_type,
+                "is_valid_evidence": v_analysis.get("is_valid_evidence"),
+                "detected_event": v_analysis.get("detected_event"),
+            },
+        )
+    except Exception:
+        pass
+
     return ticket
 
 
@@ -156,6 +182,7 @@ def update_ticket(ticket_id: str, payload: TicketUpdate, db: Session = Depends(g
     if not ticket:
         raise HTTPException(404, "ticket not found")
 
+    prev_status = ticket.status
     if payload.status is not None:
         ticket.status = payload.status
     if payload.resolution_notes is not None:
@@ -169,4 +196,21 @@ def update_ticket(ticket_id: str, payload: TicketUpdate, db: Session = Depends(g
     db.commit()
     db.refresh(ticket)
     _attach_photo_url(ticket)
+
+    try:
+        from app.services import audit_logger
+        audit_logger.log_event(
+            db=db,
+            action="TICKET_UPDATED",
+            plant_id=ticket.plant_id,
+            ticket_id=ticket.id,
+            actor_id="SAFETY_OFFICER",
+            actor_role="safety_officer",
+            previous_state={"status": prev_status},
+            new_state={"status": ticket.status, "routing_tier": ticket.routing_tier},
+            details={"resolution_notes": payload.resolution_notes},
+        )
+    except Exception:
+        pass
+
     return ticket
