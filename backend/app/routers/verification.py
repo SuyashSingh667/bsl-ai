@@ -187,12 +187,10 @@ def _finalize(ticket: Ticket) -> None:
             score = max(score, round(0.75 + 0.15 * v_analysis.get("confidence", 0.8), 2))
             status = "strongly_supported"
         else:
-            # Unrelated / inconclusive image: KEEP SCORE NEUTRAL to prevent false alarms
+            # Unrelated / inconclusive image: KEEP SCORE NEUTRAL (do not add visual elevation bonus)
+            # Invariant: Lack of photo match must NEVER artificially deflate worker credibility or baseline risk
             if obs_mode in ["visual_confirmed", "both_seen_and_smelled"]:
-                # If they claimed visual confirmation but uploaded an unrelated photo,
-                # do not elevate score; cap it at needs_verification
-                score = min(score, 0.60)
-                status = "needs_verification"
+                status = "strongly_supported" if score >= 0.7 else "needs_verification"
             elif score >= 0.7:
                 status = "strongly_supported"
             elif score >= 0.4:

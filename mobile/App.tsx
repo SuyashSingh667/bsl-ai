@@ -32,8 +32,11 @@ export default function App() {
   // 2. Incident created from audio or text
   const handleIncidentCreated = (newTicket: Ticket) => {
     setTicket(newTicket);
-    // If compulsory photo/video required, proceed to media proof
-    if (newTicket.requires_photo_proof || reportType === 'emergency') {
+    const isEmergency = newTicket.report_type === 'emergency' || reportType === 'emergency';
+    if (isEmergency) {
+      // FAST-PATH: Acute emergencies immediately show personal safety directives and emergency dispatch status
+      setStep('precautions');
+    } else if (newTicket.requires_photo_proof) {
       setStep('media_evidence');
     } else {
       setStep('verification');
@@ -43,8 +46,8 @@ export default function App() {
   // 3. Media proof uploaded
   const handleMediaUploaded = (updatedTicket: Ticket) => {
     setTicket(updatedTicket);
-    if (reportType === 'emergency') {
-      // Emergency bypasses interview, goes straight to precautions / result
+    const isEmergency = updatedTicket.report_type === 'emergency' || reportType === 'emergency';
+    if (isEmergency) {
       setStep('precautions');
     } else {
       setStep('verification');
@@ -53,7 +56,8 @@ export default function App() {
 
   // 4. Skip media if worker in danger
   const handleSkipMedia = () => {
-    if (reportType === 'emergency') {
+    const isEmergency = ticket?.report_type === 'emergency' || reportType === 'emergency';
+    if (isEmergency) {
       setStep('precautions');
     } else {
       setStep('verification');

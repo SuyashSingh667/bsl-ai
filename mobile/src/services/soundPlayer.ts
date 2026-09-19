@@ -1,10 +1,17 @@
 import { createAudioPlayer, setAudioModeAsync, AudioPlayer } from 'expo-audio';
 import * as FileSystem from 'expo-file-system/legacy';
+import * as Speech from 'expo-speech';
 
 class SoundPlayerManager {
   private currentPlayer: AudioPlayer | null = null;
+  private isSpeakingOffline: boolean = false;
 
   async stop() {
+    try {
+      Speech.stop();
+      this.isSpeakingOffline = false;
+    } catch (e) {}
+
     if (this.currentPlayer) {
       try {
         this.currentPlayer.pause();
@@ -14,6 +21,78 @@ class SoundPlayerManager {
       }
       this.currentPlayer = null;
     }
+  }
+
+  async speakOffline(
+    text: string,
+    language: string = 'hi',
+    onStatusUpdate?: (isPlaying: boolean) => void
+  ) {
+    await this.stop();
+    if (!text || !text.trim()) {
+      if (onStatusUpdate) onStatusUpdate(false);
+      return;
+    }
+
+    const langMap: Record<string, string> = {
+      hi: 'hi-IN',
+      en: 'en-IN',
+      bn: 'bn-IN',
+      ta: 'ta-IN',
+      te: 'te-IN',
+      mr: 'mr-IN',
+      gu: 'gu-IN',
+      kn: 'kn-IN',
+      ml: 'ml-IN',
+      pa: 'pa-IN',
+      or: 'hi-IN',
+    };
+    const voiceLang = langMap[(language || 'hi').toLowerCase()] || 'hi-IN';
+
+    this.isSpeakingOffline = true;
+    if (onStatusUpdate) onStatusUpdate(true);
+
+    try {
+      Speech.speak(text.trim(), {
+        language: voiceLang,
+        pitch: 1.0,
+        rate: 0.95,
+        onDone: () => {
+          this.isSpeakingOffline = false;
+          if (onStatusUpdate) onStatusUpdate(false);
+        },
+        onStopped: () => {
+          this.isSpeakingOffline = false;
+          if (onStatusUpdate) onStatusUpdate(false);
+        },
+        onError: (err) => {
+          console.warn('[SoundPlayer] On-device offline TTS error:', err);
+          this.isSpeakingOffline = false;
+          if (onStatusUpdate) onStatusUpdate(false);
+        },
+      });
+    } catch (err) {
+      console.warn('[SoundPlayer] Speech.speak call failed:', err);
+      this.isSpeakingOffline = false;
+      if (onStatusUpdate) onStatusUpdate(false);
+    }
+  }
+
+  async playUrlOrSpeak(
+    url: string | null | undefined,
+    fallbackText: string,
+    language: string = 'hi',
+    onStatusUpdate?: (isPlaying: boolean) => void
+  ): Promise<boolean> {
+    if (url) {
+      const res = await this.playUrl(url, onStatusUpdate);
+      if (res) return true;
+    }
+
+    // If server audio URL is missing or failed to stream/download, fall back to offline speech synthesis
+    console.log('[SoundPlayer] Falling back to on-device speech synthesis for text length:', fallbackText.length);
+    await this.speakOffline(fallbackText, language, onStatusUpdate);
+    return true;
   }
 
   async playUrl(

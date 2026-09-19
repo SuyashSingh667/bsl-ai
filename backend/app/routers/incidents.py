@@ -62,6 +62,33 @@ def detect_language_from_text(text: str) -> str:
     return "en"
 
 
+_CRITICAL_HAZARD_REGEX = re.compile(
+    r"\b(trapped|collapsed|unconscious|fainted|fatality|dead|explosion|blast|burst|"
+    r"spreading fire|active fire|major fire|huge fire|blaze|leaking gas|gas leak|"
+    r"toxic gas|asphyxiation|suffocation|acid splash|chemical burn|breakout|"
+    r"molten metal spill|ladle overflow|arc flash|electrocuted|electrocution|"
+    r"आग लगी|धमाका|विस्फोट|बेहोश|फंसा|गैस रिसाव|जहरीली गैस|दम घुट|झुलस|पिघला लोहा|करंट लगा|गंभीर)\b",
+    re.IGNORECASE,
+)
+
+
+def _is_acute_emergency(report_type: str, category: str | None, text: str, text_en: str, impact: dict | None) -> bool:
+    if report_type == "emergency":
+        return True
+    combined = f"{text} {text_en}"
+    if _CRITICAL_HAZARD_REGEX.search(combined):
+        return True
+    if category in ["gas_leak", "molten_metal_spill", "confined_space_emergency"]:
+        return True
+    if impact and impact.get("applicable"):
+        if impact.get("civilian_exposure_alert"):
+            return True
+        _, hi = impact.get("estimated_persons_at_risk_range", (0, 0))
+        if hi >= 20:
+            return True
+    return False
+
+
 def _create_ticket(
     db: Session,
     report_type: str,
@@ -98,9 +125,29 @@ def _create_ticket(
         ext = Path(photo_proof_path).suffix.lower()
         media_type = "video" if ext in [".mp4", ".webm", ".mov", ".mkv", ".avi"] else "image"
 
+    impact = spatial_impact.assess(effective_zone, category)
+    is_emergency = _is_acute_emergency(report_type, category, text, text_en, impact)
+
+    # FAST-PATH DISPATCH LOGIC:
+    # Emergency incidents bypass verification delays and trigger immediate escalation.
+    # Non-emergency near-misses receive an initial risk score and routing tier immediately
+    # so dispatchers and supervisors see the ticket on their board from second zero.
+    if is_emergency:
+        effective_report_type = "emergency"
+        verification_status = "emergency_bypass"
+        routing_tier = "emergency_authority"
+        status = "escalated"
+        initial_risk = routing.compute_risk_score(category, verification_score=1.0, impact=impact)
+    else:
+        effective_report_type = "suspected"
+        verification_status = "pending"
+        status = "open"
+        initial_risk = routing.compute_risk_score(category, verification_score=0.5, impact=impact)
+        routing_tier = routing.route(effective_report_type, initial_risk, impact)
+
     ticket = Ticket(
         employee_id=employee_id,
-        report_type=report_type,
+        report_type=effective_report_type,
         incident_description=text,
         incident_description_en=text_en,
         language=effective_lang,
@@ -113,6 +160,11 @@ def _create_ticket(
         predicted_category=category,
         category_confidence=confidence,
         extracted_entities=entities,
+        verification_status=verification_status,
+        risk_score=initial_risk,
+        routing_tier=routing_tier,
+        status=status,
+        impact_assessment=impact,
         model_versions={
             "classifier": "semantic-hybrid-v1",
             "entity_extraction": "regex+semantic-zone-v1",
@@ -120,49 +172,43 @@ def _create_ticket(
         },
     )
 
-    impact = spatial_impact.assess(effective_zone, category)
-    if impact:
-        ticket.impact_assessment = impact
+    # Pre-generate situation-grounded precautionary measures for immediate worker safety
+    try:
+        ticket.precautionary_measures = precautionary_measures.generate_precautionary_measures(ticket)
+    except Exception:
+        pass
 
-    if report_type == "emergency":
-        ticket.verification_status = "emergency_bypass"
-        ticket.risk_score = routing.compute_risk_score(category, verification_score=1.0, impact=impact)
-        ticket.routing_tier = "emergency_authority"
-        ticket.status = "escalated"
-        try:
-            ticket.precautionary_measures = precautionary_measures.generate_precautionary_measures(ticket)
-        except Exception:
-            pass
-        # Synthesize initial emergency incident report with dispatch recipients
-        try:
-            findings = {
-                "observation_mode": "visual_confirmed",
-                "is_hazard_active": True,
-                "confirmed_equipment": [entities.get("equipment")] if entities.get("equipment") else [],
-                "reported_symptoms": [],
-                "people_exposed_count": None,
-                "total_evidence_score": 1.0,
-            }
-            photo_url = f"/photos/{Path(ticket.photo_proof_path).name}" if ticket.photo_proof_path else None
-            rep = report_generator.generate_incident_report(
-                ticket_id=ticket.id,
-                category=category or "fire",
-                category_confidence=confidence,
-                zone_id=effective_zone,
-                initial_statement=text,
-                initial_statement_en=text_en,
-                findings=findings,
-                impact=impact,
-                routing_tier="emergency_authority",
-                risk_score=ticket.risk_score,
-                photo_url=photo_url,
-                report_type="emergency",
-            )
-            ticket.safety_report = rep
-            ticket.guidance_text = rep["report_markdown"]
-            ticket.guidance_sources = rep["sources"]
-        except Exception:
-            pass
+    # FAST-PATH DISPATCH: Synthesize initial safety incident report with designated dispatch recipients
+    # This guarantees emergency teams and shift supervisors are assigned at second zero.
+    try:
+        findings = {
+            "observation_mode": "visual_confirmed" if is_emergency else "unspecified",
+            "is_hazard_active": True if is_emergency else None,
+            "confirmed_equipment": [entities.get("equipment")] if entities.get("equipment") else [],
+            "reported_symptoms": [],
+            "people_exposed_count": None,
+            "total_evidence_score": 1.0 if is_emergency else 0.5,
+        }
+        photo_url = f"/photos/{Path(ticket.photo_proof_path).name}" if ticket.photo_proof_path else None
+        rep = report_generator.generate_incident_report(
+            ticket_id=ticket.id,
+            category=category or "fire",
+            category_confidence=confidence,
+            zone_id=effective_zone,
+            initial_statement=text,
+            initial_statement_en=text_en,
+            findings=findings,
+            impact=impact,
+            routing_tier=ticket.routing_tier,
+            risk_score=ticket.risk_score,
+            photo_url=photo_url,
+            report_type=ticket.report_type,
+        )
+        ticket.safety_report = rep
+        ticket.guidance_text = rep["report_markdown"]
+        ticket.guidance_sources = rep["sources"]
+    except Exception:
+        pass
 
     db.add(ticket)
     db.commit()

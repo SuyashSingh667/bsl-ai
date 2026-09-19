@@ -88,9 +88,16 @@ export const PrecautionaryMeasuresScreen: React.FC<PrecautionaryMeasuresScreenPr
       return;
     }
 
-    if (!audioUrl) return;
+    // Build spoken text for offline fallback
+    const spokenText =
+      (isHindi
+        ? precautionsData?.spoken_summary_hi || ticket.guidance_text_native
+        : precautionsData?.spoken_summary_en || ticket.guidance_text) ||
+      measuresList.map((m: any) => m.instruction || m.title).join('. ');
 
-    await soundPlayer.playUrl(audioUrl, (playing) => {
+    const lang = ticket.language || (isHindi ? 'hi' : 'en');
+
+    await soundPlayer.playUrlOrSpeak(audioUrl, spokenText, lang, (playing) => {
       setIsPlayingFullAudio(playing);
     });
   };

@@ -87,21 +87,20 @@ export const VerificationInterviewScreen: React.FC<VerificationInterviewScreenPr
       if (data.done) {
         soundPlayer.stop();
         onInterviewComplete(ticket);
-      } else if (data.question_audio_path) {
-        const base = await getApiBaseUrl();
-        const fullUrl = data.question_audio_path.startsWith('http')
-          ? data.question_audio_path
-          : `${base}${data.question_audio_path}`;
-        setAudioSourceUri(fullUrl);
-        // Play question aloud through phone speaker
-        playAudio(fullUrl);
       } else {
-        if (autoMicRef.current) {
-          autoStartTimerRef.current = setTimeout(() => {
-            if (!isSubmittingRef.current && !isRecordingRef.current) {
-              startVoiceRecording();
-            }
-          }, 1000);
+        let fullUrl: string | null = null;
+        if (data.question_audio_path) {
+          const base = await getApiBaseUrl();
+          fullUrl = data.question_audio_path.startsWith('http')
+            ? data.question_audio_path
+            : `${base}${data.question_audio_path}`;
+          setAudioSourceUri(fullUrl);
+        } else {
+          setAudioSourceUri(null);
+        }
+
+        if (data.question) {
+          playAudio(fullUrl, data.question);
         }
       }
     } catch (err: any) {
@@ -118,12 +117,13 @@ export const VerificationInterviewScreen: React.FC<VerificationInterviewScreenPr
     };
   }, []);
 
-  const playAudio = async (targetUri?: string) => {
-    const uriToPlay = targetUri || audioSourceUri;
-    if (!uriToPlay) return;
+  const playAudio = async (targetUri?: string | null, fallbackText?: string) => {
     clearTimers();
+    const uriToPlay = targetUri !== undefined ? targetUri : audioSourceUri;
+    const textToSpeak = fallbackText || currentQuestion?.question || '';
+    const lang = ticket.language || 'hi';
 
-    await soundPlayer.playUrl(uriToPlay, (playing) => {
+    await soundPlayer.playUrlOrSpeak(uriToPlay, textToSpeak, lang, (playing) => {
       setIsPlayingAudio(playing);
       // When audio question finishes speaking, auto-start microphone (if enabled)
       if (!playing && autoMicRef.current && !isSubmittingRef.current) {

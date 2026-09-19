@@ -9,17 +9,30 @@ from app.config import CATEGORY_BASELINE_SEVERITY
 
 
 def compute_risk_score(category: str | None, verification_score: float | None, impact: dict | None) -> float:
+    """
+    Computes an objective industrial risk score (0.0 to 1.0).
+    SAFETY INVARIANT:
+    The category's statutory baseline severity acts as a strict lower bound.
+    AI verification confidence or visual corroboration may ELEVATE the score,
+    but uncertainty, missing answers, or inconclusive media must NEVER drag
+    the risk score below the intrinsic hazard baseline floor.
+    """
     baseline = CATEGORY_BASELINE_SEVERITY.get(category, 0.5) if category else 0.5
     v_score = verification_score if verification_score is not None else 0.5
 
-    score = 0.5 * baseline + 0.5 * v_score
+    # Verification evidence corroboration can provide up to +0.20 elevation
+    # when evidence is strongly supported (v_score > 0.50).
+    evidence_boost = max(0.0, (v_score - 0.5) * 0.4)
+    score = baseline + evidence_boost
 
     if impact and impact.get("applicable"):
-        _, hi = impact["estimated_persons_at_risk_range"]
+        _, hi = impact.get("estimated_persons_at_risk_range", (0, 0))
         if hi >= 20:
             score = min(1.0, score + 0.1)
 
-    return round(score, 2)
+    # Invariant: strictly bound by baseline floor and capped at 1.0
+    final_score = max(baseline, min(1.0, score))
+    return round(final_score, 2)
 
 
 def route(report_type: str, risk_score: float, impact: dict | None) -> str:
