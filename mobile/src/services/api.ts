@@ -193,3 +193,17 @@ export async function synthesizeSpeech(text: string, language: string = 'hi'): P
   const path = data.audio_path;
   return path.startsWith('http') ? path : `${base}${path}`;
 }
+
+export async function getPrecautionaryMeasures(ticketId: string): Promise<any> {
+  const base = await getApiBaseUrl();
+  const res = await fetch(`${base}/guidance/${ticketId}/precautions`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+  });
+  if (!res.ok) {
+    const txt = await res.text();
+    throw new Error(`Failed to fetch precautionary measures: ${txt}`);
+  }
+  return res.json();
+}
+
