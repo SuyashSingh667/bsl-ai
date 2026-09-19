@@ -6,10 +6,10 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { createAudioPlayer, setAudioModeAsync } from 'expo-audio';
 import { StepIndicator } from '../components/StepIndicator';
 import { Ticket } from '../services/api';
 import { getApiBaseUrl } from '../services/config';
+import { soundPlayer } from '../services/soundPlayer';
 
 interface PrecautionaryMeasuresScreenProps {
   ticket: Ticket;
@@ -21,6 +21,7 @@ export const PrecautionaryMeasuresScreen: React.FC<PrecautionaryMeasuresScreenPr
   onProceedToResult,
 }) => {
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [isPlayingAudio, setIsPlayingAudio] = useState<boolean>(false);
 
   const precautions = ticket.precautionary_measures;
   const measuresList: string[] =
@@ -31,40 +32,12 @@ export const PrecautionaryMeasuresScreen: React.FC<PrecautionaryMeasuresScreenPr
       'Do not approach unisolated equipment without SCBA / PPE gear.',
     ];
 
-  const [isPlayingAudio, setIsPlayingAudio] = useState<boolean>(false);
-  const playerRef = React.useRef<any>(null);
-
   const playGuidanceAudio = async (targetUri?: string) => {
     const uriToPlay = targetUri || audioUrl;
     if (!uriToPlay) return;
-    try {
-      setIsPlayingAudio(true);
-      await setAudioModeAsync({
-        playsInSilentMode: true,
-        allowsRecording: false,
-      });
-
-      if (playerRef.current) {
-        try {
-          playerRef.current.pause();
-          playerRef.current.remove();
-        } catch {}
-        playerRef.current = null;
-      }
-
-      const p = createAudioPlayer({ uri: uriToPlay }, { downloadFirst: true });
-      playerRef.current = p;
-      p.play();
-
-      p.addListener('playbackStatusUpdate', (st: any) => {
-        if (st.didJustFinish) {
-          setIsPlayingAudio(false);
-        }
-      });
-    } catch (err: any) {
-      setIsPlayingAudio(false);
-      console.warn('Guidance audio playback error:', err);
-    }
+    await soundPlayer.playUrl(uriToPlay, (playing) => {
+      setIsPlayingAudio(playing);
+    });
   };
 
   useEffect(() => {
@@ -80,24 +53,12 @@ export const PrecautionaryMeasuresScreen: React.FC<PrecautionaryMeasuresScreenPr
     };
     resolveAudio();
     return () => {
-      if (playerRef.current) {
-        try {
-          playerRef.current.pause();
-          playerRef.current.remove();
-        } catch {}
-        playerRef.current = null;
-      }
+      soundPlayer.stop();
     };
   }, [ticket]);
 
-  const handleProceed = () => {
-    if (playerRef.current) {
-      try {
-        playerRef.current.pause();
-        playerRef.current.remove();
-      } catch {}
-      playerRef.current = null;
-    }
+  const handleProceed = async () => {
+    await soundPlayer.stop();
     setIsPlayingAudio(false);
     onProceedToResult();
   };

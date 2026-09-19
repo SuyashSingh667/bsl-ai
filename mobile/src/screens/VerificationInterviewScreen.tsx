@@ -9,7 +9,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { createAudioPlayer, setAudioModeAsync } from 'expo-audio';
 import { StepIndicator } from '../components/StepIndicator';
 import {
   getNextQuestion,
@@ -18,6 +17,7 @@ import {
   Ticket,
 } from '../services/api';
 import { getApiBaseUrl } from '../services/config';
+import { soundPlayer } from '../services/soundPlayer';
 
 interface VerificationInterviewScreenProps {
   ticket: Ticket;
@@ -33,9 +33,7 @@ export const VerificationInterviewScreen: React.FC<VerificationInterviewScreenPr
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [customAnswer, setCustomAnswer] = useState<string>('');
   const [audioSourceUri, setAudioSourceUri] = useState<string | null>(null);
-
   const [isPlayingAudio, setIsPlayingAudio] = useState<boolean>(false);
-  const playerRef = React.useRef<any>(null);
 
   // Fetch next question from adaptive verification engine
   const fetchNextQ = async () => {
@@ -46,6 +44,7 @@ export const VerificationInterviewScreen: React.FC<VerificationInterviewScreenPr
       setIsLoading(false);
 
       if (data.done) {
+        soundPlayer.stop();
         onInterviewComplete(ticket);
       } else if (data.question_audio_path) {
         const base = await getApiBaseUrl();
@@ -53,7 +52,7 @@ export const VerificationInterviewScreen: React.FC<VerificationInterviewScreenPr
           ? data.question_audio_path
           : `${base}${data.question_audio_path}`;
         setAudioSourceUri(fullUrl);
-        // Auto-play audio aloud as soon as question loads
+        // Auto-play audio aloud through phone speaker as soon as question loads
         playAudio(fullUrl);
       }
     } catch (err: any) {
@@ -65,61 +64,23 @@ export const VerificationInterviewScreen: React.FC<VerificationInterviewScreenPr
   useEffect(() => {
     fetchNextQ();
     return () => {
-      if (playerRef.current) {
-        try {
-          playerRef.current.pause();
-          playerRef.current.remove();
-        } catch {}
-        playerRef.current = null;
-      }
+      soundPlayer.stop();
     };
   }, []);
 
   const playAudio = async (targetUri?: string) => {
     const uriToPlay = targetUri || audioSourceUri;
     if (!uriToPlay) return;
-    try {
-      setIsPlayingAudio(true);
-      // Ensure speaker playback on iOS/Android
-      await setAudioModeAsync({
-        playsInSilentMode: true,
-        allowsRecording: false,
-      });
-
-      if (playerRef.current) {
-        try {
-          playerRef.current.pause();
-          playerRef.current.remove();
-        } catch {}
-        playerRef.current = null;
-      }
-
-      const p = createAudioPlayer({ uri: uriToPlay }, { downloadFirst: true });
-      playerRef.current = p;
-      p.play();
-
-      p.addListener('playbackStatusUpdate', (st: any) => {
-        if (st.didJustFinish) {
-          setIsPlayingAudio(false);
-        }
-      });
-    } catch (err: any) {
-      setIsPlayingAudio(false);
-      console.warn('Question audio playback error:', err);
-    }
+    await soundPlayer.playUrl(uriToPlay, (playing) => {
+      setIsPlayingAudio(playing);
+    });
   };
 
   // Submit selected option chip
   const handleSelectOption = async (optionText: string) => {
     if (isSubmitting || !currentQuestion?.question) return;
-    // Stop any playing audio on answer submit
-    if (playerRef.current) {
-      try {
-        playerRef.current.pause();
-        playerRef.current.remove();
-      } catch {}
-      playerRef.current = null;
-    }
+    // Stop playing audio immediately on user answer
+    await soundPlayer.stop();
     setIsPlayingAudio(false);
 
     try {
