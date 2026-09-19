@@ -2,7 +2,7 @@ services:
   - type: web
     name: bsl-safety-backend
     runtime: docker
-    rootDir: backend
+    rootDir: .
     dockerfilePath: Dockerfile
     plan: starter
     region: singapore # Closest to India for fast plant latency
