@@ -685,6 +685,9 @@ def generate_precautionary_measures(ticket: Ticket) -> dict[str, Any]:
     except Exception as exc:
         logger.warning(f"Failed to synthesize precautionary measures spoken summary TTS for lang {lang}: {exc}")
 
+    audio_url = f"/audio/{Path(sp_audio_path).name}" if sp_audio_path else None
+    q_audio_url = f"/audio/{Path(q_audio_path).name}" if q_audio_path else None
+
     result = {
         "category": category,
         "sop_source": sop_info["title"],
@@ -693,9 +696,9 @@ def generate_precautionary_measures(ticket: Ticket) -> dict[str, Any]:
         "prompt_question_native": prompt_q,
         "spoken_summary_en": spoken_en,
         "spoken_summary_native": spoken_native,
-        "audio_path": sp_audio_path,
-        "question_audio_path": q_audio_path,
-        "spoken_audio_path": sp_audio_path,
+        "audio_path": audio_url,
+        "question_audio_path": q_audio_url,
+        "spoken_audio_path": audio_url,
         "measures": measures,
         "situation_facts": sit,
     }

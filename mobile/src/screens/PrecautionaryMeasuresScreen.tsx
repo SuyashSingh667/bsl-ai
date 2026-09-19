@@ -6,7 +6,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useAudioPlayer } from 'expo-audio';
+import { createAudioPlayer, setAudioModeAsync } from 'expo-audio';
 import { StepIndicator } from '../components/StepIndicator';
 import { Ticket } from '../services/api';
 import { getApiBaseUrl } from '../services/config';
@@ -43,17 +43,33 @@ export const PrecautionaryMeasuresScreen: React.FC<PrecautionaryMeasuresScreenPr
     resolveAudio();
   }, [ticket]);
 
-  // Modern SDK 57 audio player hook
-  const player = useAudioPlayer(audioUrl ? { uri: audioUrl } : null);
+  const [isPlayingAudio, setIsPlayingAudio] = useState<boolean>(false);
+  const playerRef = React.useRef<any>(null);
 
-  const playGuidanceAudio = () => {
+  const playGuidanceAudio = async () => {
+    if (!audioUrl) return;
     try {
-      if (player) {
-        player.seekTo(0);
-        player.play();
+      setIsPlayingAudio(true);
+      await setAudioModeAsync({
+        playsInSilentMode: true,
+        allowsRecording: false,
+      });
+
+      if (playerRef.current) {
+        try { playerRef.current.remove(); } catch {}
       }
+
+      const p = createAudioPlayer({ uri: audioUrl });
+      playerRef.current = p;
+      p.play();
+
+      p.addListener('playbackStatusUpdate', (st: any) => {
+        if (st.didJustFinish) {
+          setIsPlayingAudio(false);
+        }
+      });
     } catch {
-      // ignore
+      setIsPlayingAudio(false);
     }
   };
 

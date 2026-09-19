@@ -9,7 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useAudioPlayer } from 'expo-audio';
+import { createAudioPlayer, setAudioModeAsync } from 'expo-audio';
 import { StepIndicator } from '../components/StepIndicator';
 import {
   getNextQuestion,
@@ -34,8 +34,8 @@ export const VerificationInterviewScreen: React.FC<VerificationInterviewScreenPr
   const [customAnswer, setCustomAnswer] = useState<string>('');
   const [audioSourceUri, setAudioSourceUri] = useState<string | null>(null);
 
-  // Modern SDK 57 audio player hook
-  const player = useAudioPlayer(audioSourceUri ? { uri: audioSourceUri } : null);
+  const [isPlayingAudio, setIsPlayingAudio] = useState<boolean>(false);
+  const playerRef = React.useRef<any>(null);
 
   // Fetch next question from adaptive verification engine
   const fetchNextQ = async () => {
@@ -62,16 +62,39 @@ export const VerificationInterviewScreen: React.FC<VerificationInterviewScreenPr
 
   useEffect(() => {
     fetchNextQ();
+    return () => {
+      if (playerRef.current) {
+        try { playerRef.current.remove(); } catch {}
+      }
+    };
   }, []);
 
-  const playAudio = () => {
+  const playAudio = async () => {
+    if (!audioSourceUri) return;
     try {
-      if (player) {
-        player.seekTo(0);
-        player.play();
+      setIsPlayingAudio(true);
+      // Ensure speaker playback on iOS/Android
+      await setAudioModeAsync({
+        playsInSilentMode: true,
+        allowsRecording: false,
+      });
+
+      if (playerRef.current) {
+        try { playerRef.current.remove(); } catch {}
       }
-    } catch {
-      // ignore
+
+      const p = createAudioPlayer({ uri: audioSourceUri });
+      playerRef.current = p;
+      p.play();
+
+      p.addListener('playbackStatusUpdate', (st: any) => {
+        if (st.didJustFinish) {
+          setIsPlayingAudio(false);
+        }
+      });
+    } catch (err: any) {
+      setIsPlayingAudio(false);
+      Alert.alert('Audio Playback', 'Could not play question audio: ' + (err.message || err));
     }
   };
 

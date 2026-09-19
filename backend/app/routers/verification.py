@@ -53,7 +53,9 @@ def next_question(ticket_id: str, lang: str | None = None, db: Session = Depends
 
     audio_path = None
     if question:
-        audio_path = tts.synthesize(question, interview_lang)
+        full_p = tts.synthesize(question, interview_lang)
+        if full_p:
+            audio_path = f"/audio/{Path(full_p).name}"
 
     static_questions = verification_engine.get_questions(ticket.predicted_category, language=interview_lang)
     total_q = 4 if is_personalized else len(static_questions)
@@ -212,12 +214,10 @@ def _finalize(ticket: Ticket) -> None:
         f"Verification completed. Category: {report['category_title']}. "
         f"Threat level: {report['threat_level']}. Immediate safety actions are on your screen."
     )
-    if ticket.language and ticket.language != "en":
-        native_voice_text = translation.from_english(summary_for_voice, ticket.language)
-    else:
-        native_voice_text = summary_for_voice
+    native_voice_text = translation.from_english(summary_for_voice, ticket.language) if ticket.language and ticket.language != "en" else summary_for_voice
     ticket.guidance_text_native = native_voice_text
-    ticket.guidance_audio_path = tts.synthesize(native_voice_text, ticket.language or "en")
+    full_audio = tts.synthesize(native_voice_text, ticket.language or "en")
+    ticket.guidance_audio_path = f"/audio/{Path(full_audio).name}" if full_audio else None
 
     # 7. Generate Personalized Precautionary Measures Grounded in BSL SOPs
     try:
