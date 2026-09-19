@@ -1,5 +1,6 @@
 FROM python:3.11-slim
 
+# Install system audio and compilation dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
     build-essential \
@@ -7,21 +8,26 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /app
+# Hugging Face runs as user 1000 by default
+RUN useradd -m -u 1000 user
+USER user
+ENV HOME=/home/user \
+    PATH=/home/user/.local/bin:$PATH \
+    PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/home/user/app
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+WORKDIR $HOME/app
 
-# Copy all backend files (including spatial_impact, rag_documents, verification_questions.json)
-COPY . .
+COPY --chown=user:user requirements.txt .
+RUN pip install --no-cache-dir --user -r requirements.txt
+
+# Copy application files with proper permissions
+COPY --chown=user:user . .
 
 # Ensure upload directories exist
 RUN mkdir -p data/audio data/photos
 
-EXPOSE 8000
+# Hugging Face Spaces expects port 7860 by default
+EXPOSE 7860
 
-ENV PYTHONUNBUFFERED=1
-ENV PORT=8000
-ENV PYTHONPATH=/app
-
-CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "7860"]
