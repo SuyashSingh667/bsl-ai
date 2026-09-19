@@ -1,8 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 
-// Fallback LAN IP
-export const DEFAULT_API_BASE_URL = 'http://10.12.3.58:8000';
+// Live Cloudflare HTTPS Tunnel (connects phone from anywhere on 4G/5G/Wi-Fi with zero restrictions)
+export const DEFAULT_API_BASE_URL = 'https://shakira-mandatory-pose-cholesterol.trycloudflare.com';
 
 const STORAGE_KEY = '@bsl_api_base_url';
 
