@@ -38,7 +38,7 @@ export const ServerConfigModal: React.FC<ServerConfigModalProps> = ({ visible, o
     <Modal visible={visible} animationType="slide" transparent>
       <View style={styles.overlay}>
         <View style={styles.modalCard}>
-          <Text style={styles.title}>⚙️ Plant Server Settings</Text>
+          <Text style={styles.title}>Plant Server Settings</Text>
           <Text style={styles.description}>
             Enter the local IP address and port of your computer or plant server where FastAPI is running:
           </Text>

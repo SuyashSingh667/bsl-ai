@@ -20,7 +20,7 @@ interface PrecautionaryMeasuresScreenProps {
 const DEFAULT_HINDI_MEASURES = [
   {
     id: 'evacuate',
-    icon: '🏃',
+    icon: '',
     title: 'Immediate Evacuation & Cordon',
     title_native: 'तत्काल निकासी एवं सुरक्षा घेरा',
     text_native: 'खतरे के प्रभाव क्षेत्र से तुरंत सुरक्षित दूरी (कम से कम 100 मीटर) पर जाएं और हवा की विपरीत दिशा में रहें।',
@@ -28,7 +28,7 @@ const DEFAULT_HINDI_MEASURES = [
   },
   {
     id: 'life_safety_ppe',
-    icon: '🛡️',
+    icon: '',
     title: 'Mandatory PPE Compliance',
     title_native: 'अनिवार्य सुरक्षा उपकरण (PPE)',
     text_native: 'उचित सुरक्षा उपकरण (SCBA / रासायनिक चश्मा / सेफ्टी सूट) पहने बिना प्रभावित उपकरण के समीप न जाएं।',
@@ -36,7 +36,7 @@ const DEFAULT_HINDI_MEASURES = [
   },
   {
     id: 'donts',
-    icon: '⛔',
+    icon: '',
     title: 'Prohibited Immediate Actions',
     title_native: 'प्रतिबंधित गतिविधियां',
     text_native: 'बिजली या तेल की आग पर पानी न डालें; बिना लिखित अनुमति मशीन को दोबारा चालू करने का प्रयास न करें।',
@@ -44,7 +44,7 @@ const DEFAULT_HINDI_MEASURES = [
   },
   {
     id: 'emergency_contacts',
-    icon: '📞',
+    icon: '',
     title: 'Incident Command Notification',
     title_native: 'इमरजेंसी कंट्रोल एवं एम्बुलेंस',
     text_native: 'प्लांट फायर स्टेशन (101) एवं मेडिकल ट्रॉमा एम्बुलेंस (102) को सूचित करें और प्रभावित कर्मियों की हाजिरी लें।',
@@ -169,7 +169,6 @@ export const PrecautionaryMeasuresScreen: React.FC<PrecautionaryMeasuresScreenPr
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Safety-Critical AI Disclaimer Banner */}
         <View style={styles.aiDisclaimerBanner}>
-          <Text style={styles.aiDisclaimerIcon}>⚠️</Text>
           <View style={styles.aiDisclaimerTextWrap}>
             <Text style={styles.aiDisclaimerTitle}>
               {isHindi
@@ -186,7 +185,6 @@ export const PrecautionaryMeasuresScreen: React.FC<PrecautionaryMeasuresScreenPr
 
         {precautionsData?.sop_gap_detected ? (
           <View style={styles.sopGapBanner}>
-            <Text style={styles.sopGapIcon}>🚨</Text>
             <View style={styles.sopGapTextWrap}>
               <Text style={styles.sopGapTitle}>
                 {isHindi ? 'एसओपी अंतर पाया गया (SOP Gap Detected)' : 'SOP Gap Detected'}
@@ -202,9 +200,6 @@ export const PrecautionaryMeasuresScreen: React.FC<PrecautionaryMeasuresScreenPr
 
         {/* Header with Bilingual Title */}
         <View style={styles.alertHeader}>
-          <View style={styles.iconCircle}>
-            <Text style={styles.iconText}>🛡️</Text>
-          </View>
           <View style={styles.headerTitles}>
             <Text style={styles.title}>
               {isHindi ? 'व्यक्तिगत सुरक्षा सावधानियां' : 'Personal Safety Precautions'}
@@ -218,7 +213,6 @@ export const PrecautionaryMeasuresScreen: React.FC<PrecautionaryMeasuresScreenPr
         {/* Personalized Context Badge */}
         <View style={styles.personalizedBanner}>
           <View style={styles.personalizedBadge}>
-            <Text style={styles.personalizedBadgeIcon}>🎯</Text>
             <Text style={styles.personalizedBadgeText}>
               {isHindi
                 ? 'आपके साक्षात्कार व सत्यापन उत्तरों के आधार पर तैयार व्यक्तिगत निर्देश'
@@ -235,7 +229,7 @@ export const PrecautionaryMeasuresScreen: React.FC<PrecautionaryMeasuresScreenPr
             activeOpacity={0.85}
           >
             <View style={styles.audioIconBox}>
-              <Text style={styles.audioIcon}>{isPlayingFullAudio ? '⏹️' : '🔊'}</Text>
+              <Text style={styles.audioIcon}>{isPlayingFullAudio ? '■' : '▶'}</Text>
             </View>
             <View style={styles.audioTextWrapper}>
               <View style={styles.audioTitleRow}>
@@ -310,7 +304,6 @@ export const PrecautionaryMeasuresScreen: React.FC<PrecautionaryMeasuresScreenPr
           const titleEn = typeof m === 'object' && m.title_native && m.title && m.title !== m.title_native ? m.title : '';
           const textNative = typeof m === 'object' ? (m.text_native || m.text || m.checklist_label_native || JSON.stringify(m)) : String(m);
           const checklistLabel = typeof m === 'object' ? (m.checklist_label_native || m.checklist_label || '') : '';
-          const icon = typeof m === 'object' && m.icon ? m.icon : '⚠️';
 
           return (
             <TouchableOpacity
@@ -334,7 +327,6 @@ export const PrecautionaryMeasuresScreen: React.FC<PrecautionaryMeasuresScreenPr
                     {isChecked ? '✓' : ''}
                   </Text>
                 </View>
-                <Text style={styles.cardCategoryIcon}>{icon}</Text>
               </View>
 
               {/* Right Column: Measure Content */}
@@ -355,7 +347,7 @@ export const PrecautionaryMeasuresScreen: React.FC<PrecautionaryMeasuresScreenPr
                 {/* SOP Citation Tag */}
                 {m.citation ? (
                   <View style={styles.sopCitationBadge}>
-                    <Text style={styles.sopCitationBadgeText}>📜 {m.citation}</Text>
+                    <Text style={styles.sopCitationBadgeText}>SOP: {m.citation}</Text>
                   </View>
                 ) : null}
 

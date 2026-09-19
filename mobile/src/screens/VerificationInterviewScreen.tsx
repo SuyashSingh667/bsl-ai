@@ -317,7 +317,7 @@ export const VerificationInterviewScreen: React.FC<VerificationInterviewScreenPr
         <View style={styles.topMetaRow}>
           <View style={styles.sopBadge}>
             <Text style={styles.sopBadgeText}>
-              📖 SOP: {currentQuestion?.sop_source || 'BSL Plant Safety Standard'}
+              SOP: {currentQuestion?.sop_source || 'BSL Plant Safety Standard'}
             </Text>
           </View>
 
@@ -326,7 +326,7 @@ export const VerificationInterviewScreen: React.FC<VerificationInterviewScreenPr
             onPress={() => setAutoMicEnabled(!autoMicEnabled)}
           >
             <Text style={styles.autoMicPillText}>
-              {autoMicEnabled ? '⚡ Auto-Mic: ON' : '⚡ Auto-Mic: OFF'}
+              {autoMicEnabled ? 'Auto-Mic: ON' : 'Auto-Mic: OFF'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -353,7 +353,7 @@ export const VerificationInterviewScreen: React.FC<VerificationInterviewScreenPr
                   onPress={() => playAudio(audioSourceUri)}
                 >
                   <Text style={styles.listenButtonText}>
-                    {isPlayingAudio ? '🔊 Speaking Question Aloud...' : '🔈 Replay Question Audio'}
+                    {isPlayingAudio ? 'Speaking Question Aloud...' : 'Replay Question Audio'}
                   </Text>
                 </TouchableOpacity>
               )}
@@ -370,12 +370,12 @@ export const VerificationInterviewScreen: React.FC<VerificationInterviewScreenPr
               <View style={styles.voiceHeaderRow}>
                 <Text style={styles.voiceSectionTitle}>
                   {isRecording
-                    ? `🔴 RECORDING VOICE (${formatTime(elapsedSeconds)})`
+                    ? `RECORDING VOICE (${formatTime(elapsedSeconds)})`
                     : isTranscribing
-                    ? '⏳ TRANSCRIBING ANSWER...'
+                    ? 'TRANSCRIBING ANSWER...'
                     : isPlayingAudio
-                    ? '🔊 LISTENING AFTER QUESTION'
-                    : '🎙️ SPEAK YOUR ANSWER (बोलकर उत्तर दें)'}
+                    ? 'LISTENING AFTER QUESTION'
+                    : 'SPEAK YOUR ANSWER (बोलकर उत्तर दें)'}
                 </Text>
                 {isRecording && (
                   <View style={styles.livePulseBadge}>
@@ -394,7 +394,7 @@ export const VerificationInterviewScreen: React.FC<VerificationInterviewScreenPr
               ) : isRecording ? (
                 <View style={styles.recordingActiveContainer}>
                   <Text style={styles.recordingGuideText}>
-                    🎙️ बोलें (Speak your answer)...
+                    बोलें (Speak your answer)...
                   </Text>
                   <Text style={styles.elapsedBadge}>
                     समय: {formatTime(elapsedSeconds)} (बोलने के बाद नीचे टैप करें)
@@ -407,7 +407,7 @@ export const VerificationInterviewScreen: React.FC<VerificationInterviewScreenPr
                       activeOpacity={0.8}
                     >
                       <Text style={styles.stopRecordingButtonText}>
-                        ⏹️ बोलना समाप्त हुआ — उत्तर भेजें (Submit Answer)
+                        बोलना समाप्त हुआ — उत्तर भेजें (Submit Answer)
                       </Text>
                     </TouchableOpacity>
 
@@ -430,7 +430,6 @@ export const VerificationInterviewScreen: React.FC<VerificationInterviewScreenPr
                   disabled={isSubmitting || isLoading}
                   activeOpacity={0.8}
                 >
-                  <Text style={styles.voiceIcon}>🎙️</Text>
                   <View style={styles.voiceTextContainer}>
                     <Text style={styles.voiceButtonTitle}>
                       {isPlayingAudio ? 'प्रश्न पढ़ा जा रहा है...' : 'बोलकर उत्तर दें (Tap to Speak)'}

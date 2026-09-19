@@ -226,7 +226,7 @@ export const IncidentRecorderScreen: React.FC<IncidentRecorderScreenProps> = ({
       <ScrollView contentContainerStyle={styles.container}>
         <View style={styles.reviewModalCard}>
           <View style={styles.reviewHeaderRow}>
-            <Text style={styles.reviewTitle}>🎙️ Confirm Speech Transcript</Text>
+            <Text style={styles.reviewTitle}>Confirm Speech Transcript</Text>
             <View style={styles.confBadge}>
               <Text style={styles.confBadgeText}>
                 Confidence: {Math.round((transcribedTicket.language_confidence || 0.9) * 100)}%
@@ -259,7 +259,7 @@ export const IncidentRecorderScreen: React.FC<IncidentRecorderScreenProps> = ({
           {/* Low Confidence Critical Word Clarification Prompt */}
           {transcribedTicket.clarification_prompt && (
             <View style={styles.clarificationBanner}>
-              <Text style={styles.clarificationTitle}>⚠️ ASR CONFIRMATION REQUIRED:</Text>
+              <Text style={styles.clarificationTitle}>ASR CONFIRMATION REQUIRED:</Text>
               <Text style={styles.clarificationText}>
                 {transcribedTicket.clarification_prompt}
               </Text>
@@ -293,7 +293,6 @@ export const IncidentRecorderScreen: React.FC<IncidentRecorderScreenProps> = ({
         {/* Kiosk or Supervisor Proxy Mode Header */}
         {kioskSession && (
           <View style={styles.kioskHeaderRow}>
-            <Text style={styles.kioskIcon}>🏢</Text>
             <View style={{ flex: 1 }}>
               <Text style={styles.kioskTitle}>
                 {kioskSession.reportingMode === 'supervisor_proxy'
@@ -314,7 +313,7 @@ export const IncidentRecorderScreen: React.FC<IncidentRecorderScreenProps> = ({
           </TouchableOpacity>
           <View style={styles.typeBadge}>
             <Text style={styles.typeBadgeText}>
-              {reportType === 'emergency' ? '🚨 CRITICAL EMERGENCY' : '⚠️ INCIDENT OBSERVATION'}
+              {reportType === 'emergency' ? 'CRITICAL EMERGENCY' : 'INCIDENT OBSERVATION'}
             </Text>
           </View>
         </View>
@@ -349,7 +348,6 @@ export const IncidentRecorderScreen: React.FC<IncidentRecorderScreenProps> = ({
                 onPress={() => setSelectedZone(z.id)}
               >
                 <Text style={[styles.zoneText, isSelected && styles.zoneTextSelected]}>
-                  {isRestricted ? '⛔ ' : '📍 '}
                   {z.name} ({z.id})
                 </Text>
               </TouchableOpacity>
@@ -364,7 +362,7 @@ export const IncidentRecorderScreen: React.FC<IncidentRecorderScreenProps> = ({
             onPress={() => setMode('voice')}
           >
             <Text style={[styles.tabText, mode === 'voice' && styles.tabTextActive]}>
-              🎙️ Voice Report (Primary)
+              Voice Report (Primary)
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -372,7 +370,7 @@ export const IncidentRecorderScreen: React.FC<IncidentRecorderScreenProps> = ({
             onPress={() => setMode('text')}
           >
             <Text style={[styles.tabText, mode === 'text' && styles.tabTextActive]}>
-              ✍️ Type Text
+              Type Text
             </Text>
           </TouchableOpacity>
         </View>
@@ -412,9 +410,9 @@ export const IncidentRecorderScreen: React.FC<IncidentRecorderScreenProps> = ({
               disabled={isLoading}
               activeOpacity={0.8}
             >
-              <Text style={styles.micIcon}>{isRecording ? '⏹️' : '🎙️'}</Text>
+              <Text style={styles.micIcon}>{isRecording ? '■' : '●'}</Text>
               <Text style={styles.micActionText}>
-                {isRecording ? 'Tap to Stop & Transcribe' : 'Tap Giant Mic to Speak'}
+                {isRecording ? 'Tap to Stop & Transcribe' : 'Tap to Speak'}
               </Text>
               <Text style={styles.micSubText}>
                 {isRecording ? 'Acoustic noise filter active...' : 'One-handed, glove-friendly trigger'}

@@ -64,7 +64,7 @@ export const ReportTypeSelect: React.FC<ReportTypeSelectProps> = ({
       <View style={styles.header}>
         <View style={styles.headerTopRow}>
           <View style={styles.badge}>
-            <Text style={styles.badgeText}>🏭 INDUSTRIAL SAFETY PLATFORM</Text>
+            <Text style={styles.badgeText}>INDUSTRIAL SAFETY PLATFORM</Text>
           </View>
           {/* Outbox Status Indicator */}
           <TouchableOpacity
@@ -73,10 +73,10 @@ export const ReportTypeSelect: React.FC<ReportTypeSelectProps> = ({
           >
             <Text style={styles.outboxText}>
               {isSyncingOutbox
-                ? '🔄 Syncing...'
+                ? 'Syncing...'
                 : pendingOutboxCount > 0
-                ? `🟠 ${pendingOutboxCount} Queued`
-                : '🟢 Online'}
+                ? `${pendingOutboxCount} Queued`
+                : 'Online'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -94,7 +94,6 @@ export const ReportTypeSelect: React.FC<ReportTypeSelectProps> = ({
                 style={[styles.langChip, isSelected && styles.langChipSelected]}
                 onPress={() => i18n.setLanguage(code)}
               >
-                <Text style={styles.langFlag}>{LANGUAGE_METADATA[code].flag}</Text>
                 <Text style={[styles.langText, isSelected && styles.langTextSelected]}>
                   {LANGUAGE_METADATA[code].nativeName}
                 </Text>
@@ -117,7 +116,6 @@ export const ReportTypeSelect: React.FC<ReportTypeSelectProps> = ({
           style={styles.toolButton}
           onPress={() => setShowTrackerModal(true)}
         >
-          <Text style={styles.toolIcon}>📍</Text>
           <View>
             <Text style={styles.toolTitle}>Track Status</Text>
             <Text style={styles.toolSub}>कोड से स्थिति जानें</Text>
@@ -128,7 +126,6 @@ export const ReportTypeSelect: React.FC<ReportTypeSelectProps> = ({
           style={styles.toolButton}
           onPress={() => setShowExplainerModal(true)}
         >
-          <Text style={styles.toolIcon}>📖</Text>
           <View>
             <Text style={styles.toolTitle}>Report Lifecycle</Text>
             <Text style={styles.toolSub}>मेरी रिपोर्ट का क्या होता है?</Text>
@@ -143,9 +140,6 @@ export const ReportTypeSelect: React.FC<ReportTypeSelectProps> = ({
         onPress={() => onSelect('emergency', false, selectedShift)}
       >
         <View style={styles.cardHeader}>
-          <View style={styles.iconBadgeRed}>
-            <Text style={styles.iconText}>🚨</Text>
-          </View>
           <View style={styles.urgencyTagRed}>
             <Text style={styles.urgencyText}>HIGH PRIORITY (FAST-PATH)</Text>
           </View>
@@ -164,9 +158,6 @@ export const ReportTypeSelect: React.FC<ReportTypeSelectProps> = ({
         onPress={() => onSelect('suspected', false, selectedShift)}
       >
         <View style={styles.cardHeader}>
-          <View style={styles.iconBadgeBlue}>
-            <Text style={styles.iconText}>⚠️</Text>
-          </View>
           <View style={styles.urgencyTagBlue}>
             <Text style={styles.urgencyText}>STANDARD REPORT</Text>
           </View>
@@ -181,9 +172,6 @@ export const ReportTypeSelect: React.FC<ReportTypeSelectProps> = ({
       {/* Phase 6: Anonymous No-Blame Near-Miss Card */}
       <View style={[styles.card, styles.anonymousCard]}>
         <View style={styles.cardHeader}>
-          <View style={styles.iconBadgePurple}>
-            <Text style={styles.iconText}>🔒</Text>
-          </View>
           <View style={styles.urgencyTagPurple}>
             <Text style={styles.urgencyText}>ANONYMOUS / NO-BLAME</Text>
           </View>
@@ -222,12 +210,12 @@ export const ReportTypeSelect: React.FC<ReportTypeSelectProps> = ({
 
       {/* Shared Kiosk Mode Switcher */}
       <TouchableOpacity style={styles.kioskModeButton} onPress={onOpenKiosk}>
-        <Text style={styles.kioskModeText}>🏢 Switch to Shared Kiosk / Terminal Mode</Text>
+        <Text style={styles.kioskModeText}>Switch to Shared Kiosk / Terminal Mode</Text>
       </TouchableOpacity>
 
       {/* On-Screen Worker Privacy & Biometric Prohibition Consent */}
       <View style={styles.consentNoticeBox}>
-        <Text style={styles.consentNoticeTitle}>🔒 Worker Data Privacy & Consent</Text>
+        <Text style={styles.consentNoticeTitle}>Worker Data Privacy & Consent</Text>
         <Text style={styles.consentNoticeTextEn}>
           Voice recordings are processed solely for incident transcription and emergency dispatch. No biometric voice-printing or speaker profiling is performed. Retention is governed by factory safety compliance policies.
         </Text>
@@ -238,7 +226,7 @@ export const ReportTypeSelect: React.FC<ReportTypeSelectProps> = ({
 
       {/* Settings / Server Config Button */}
       <TouchableOpacity style={styles.settingsButton} onPress={onOpenSettings}>
-        <Text style={styles.settingsButtonText}>⚙️ Configure Plant Server IP</Text>
+        <Text style={styles.settingsButtonText}>Configure Plant Server IP</Text>
       </TouchableOpacity>
 
       {/* Modals */}

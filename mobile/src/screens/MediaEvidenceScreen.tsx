@@ -117,7 +117,7 @@ export const MediaEvidenceScreen: React.FC<MediaEvidenceScreenProps> = ({
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={[styles.headerBadge, { borderColor: 'rgba(255, 255, 255, 0.15)', backgroundColor: '#1c1c1e' }]}>
-          <Text style={[styles.headerBadgeText, { color: 'rgba(235, 235, 245, 0.85)' }]}>📸 FIELD EVIDENCE (OPTIONAL)</Text>
+          <Text style={[styles.headerBadgeText, { color: 'rgba(235, 235, 245, 0.85)' }]}>FIELD EVIDENCE (OPTIONAL)</Text>
         </View>
 
         <Text style={styles.title}>Physical Evidence Attachment</Text>
@@ -133,7 +133,6 @@ export const MediaEvidenceScreen: React.FC<MediaEvidenceScreenProps> = ({
               <Image source={{ uri: mediaUri }} style={styles.previewImage} resizeMode="cover" />
             ) : (
               <View style={styles.videoPlaceholder}>
-                <Text style={styles.videoPlaceholderIcon}>🎥</Text>
                 <Text style={styles.videoPlaceholderText}>Video Proof Captured</Text>
               </View>
             )}
@@ -144,7 +143,7 @@ export const MediaEvidenceScreen: React.FC<MediaEvidenceScreenProps> = ({
                 onPress={() => setMediaUri(null)}
                 disabled={isUploading}
               >
-                <Text style={styles.retakeButtonText}>🔄 Retake Media</Text>
+                <Text style={styles.retakeButtonText}>Retake Media</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.uploadConfirmButton}
@@ -163,9 +162,6 @@ export const MediaEvidenceScreen: React.FC<MediaEvidenceScreenProps> = ({
           <View style={styles.optionsContainer}>
             {/* Camera Photo */}
             <TouchableOpacity style={styles.actionCard} onPress={takePhotoWithCamera}>
-              <View style={styles.iconCircleBlue}>
-                <Text style={styles.actionIcon}>📸</Text>
-              </View>
               <View style={styles.actionDetails}>
                 <Text style={styles.actionTitle}>Take Photograph</Text>
                 <Text style={styles.actionSub}>Open native phone camera to snap evidence</Text>
@@ -174,9 +170,6 @@ export const MediaEvidenceScreen: React.FC<MediaEvidenceScreenProps> = ({
 
             {/* Camera Video */}
             <TouchableOpacity style={styles.actionCard} onPress={recordVideoWithCamera}>
-              <View style={styles.iconCircleRed}>
-                <Text style={styles.actionIcon}>📹</Text>
-              </View>
               <View style={styles.actionDetails}>
                 <Text style={styles.actionTitle}>Record Short Video</Text>
                 <Text style={styles.actionSub}>Capture 15-30s video of flame, leak, or spill</Text>
@@ -185,9 +178,6 @@ export const MediaEvidenceScreen: React.FC<MediaEvidenceScreenProps> = ({
 
             {/* Device Gallery */}
             <TouchableOpacity style={styles.actionCard} onPress={pickFromGallery}>
-              <View style={styles.iconCircleGreen}>
-                <Text style={styles.actionIcon}>🖼️</Text>
-              </View>
               <View style={styles.actionDetails}>
                 <Text style={styles.actionTitle}>Choose from Gallery</Text>
                 <Text style={styles.actionSub}>Select existing photo or video from device</Text>

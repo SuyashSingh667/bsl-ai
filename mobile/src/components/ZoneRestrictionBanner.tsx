@@ -58,7 +58,6 @@ export const ZoneRestrictionBanner: React.FC<Props> = ({
   return (
     <View style={styles.bannerContainer}>
       <View style={styles.headerRow}>
-        <Text style={styles.warningIcon}>⛔</Text>
         <View style={styles.headerTextWrap}>
           <Text style={styles.headerTitle}>PHONE-RESTRICTED / INTRINSICALLY SAFE ZONE</Text>
           <Text style={styles.headerSub}>
@@ -69,7 +68,7 @@ export const ZoneRestrictionBanner: React.FC<Props> = ({
 
       <View style={styles.alternativeBox}>
         <Text style={styles.altLabel}>SAFE REPORTING ALTERNATIVE:</Text>
-        <Text style={styles.altText}>📍 {finalAlt}</Text>
+        <Text style={styles.altText}>{finalAlt}</Text>
       </View>
 
       {onUseKiosk && (

@@ -49,14 +49,12 @@ export const TicketResultScreen: React.FC<TicketResultScreenProps> = ({
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Success Header */}
         <View style={styles.successBanner}>
-          <Text style={styles.successIcon}>✅</Text>
           <Text style={styles.successTitle}>Incident Logged & Dispatched</Text>
           <Text style={styles.ticketIdText}>Ticket ID: {ticket.id}</Text>
         </View>
 
         {/* Safety-Critical AI Advisory Notice */}
         <View style={styles.aiNoticeBanner}>
-          <Text style={styles.aiNoticeIcon}>⚠️</Text>
           <View style={styles.aiNoticeTextWrap}>
             <Text style={styles.aiNoticeTitle}>AI-Generated Guidance — Verify with Supervisor</Text>
             <Text style={styles.aiNoticeSub}>
@@ -68,7 +66,6 @@ export const TicketResultScreen: React.FC<TicketResultScreenProps> = ({
         {/* Human Review Inspection Flag */}
         {(ticket.flagged_for_human_review || visualAnalysis?.flagged_for_human_review) && (
           <View style={styles.humanReviewBanner}>
-            <Text style={styles.humanReviewIcon}>🔍</Text>
             <View style={styles.humanReviewTextWrap}>
               <Text style={styles.humanReviewTitle}>Flagged for Physical Inspection</Text>
               <Text style={styles.humanReviewSub}>
@@ -200,7 +197,7 @@ export const TicketResultScreen: React.FC<TicketResultScreenProps> = ({
             visualAnalysis.is_valid_evidence ? styles.aiCardConfirmed : styles.aiCardInconclusive
           ]}>
             <View style={styles.aiHeaderRow}>
-              <Text style={styles.aiHeaderTitle}>🤖 AI Visual Analysis</Text>
+              <Text style={styles.aiHeaderTitle}>AI Visual Analysis</Text>
               <View style={[
                 styles.aiStatusBadge,
                 visualAnalysis.is_valid_evidence ? styles.aiBadgeConfirmed : styles.aiBadgeInconclusive
@@ -209,7 +206,7 @@ export const TicketResultScreen: React.FC<TicketResultScreenProps> = ({
                   styles.aiStatusBadgeText,
                   visualAnalysis.is_valid_evidence ? styles.aiBadgeTextConfirmed : styles.aiBadgeTextInconclusive
                 ]}>
-                  {visualAnalysis.is_valid_evidence ? '✓ CONFIRMED' : '⚠️ INCONCLUSIVE'}
+                  {visualAnalysis.is_valid_evidence ? 'CONFIRMED' : 'INCONCLUSIVE'}
                 </Text>
               </View>
             </View>
@@ -271,7 +268,7 @@ export const TicketResultScreen: React.FC<TicketResultScreenProps> = ({
             {visualAnalysis.is_experimental && (
               <View style={styles.experimentalBanner}>
                 <Text style={styles.experimentalBannerText}>
-                  ⚠️ EXPERIMENTAL / NO VERIFIED PLANT DATA: Model prediction for '{visualAnalysis.detected_event}' is unvalidated. Do not rely on AI for this hazard class.
+                  EXPERIMENTAL / NO VERIFIED PLANT DATA: Model prediction for '{visualAnalysis.detected_event}' is unvalidated. Do not rely on AI for this hazard class.
                 </Text>
               </View>
             )}

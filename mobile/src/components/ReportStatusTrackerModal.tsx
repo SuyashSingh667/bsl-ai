@@ -19,11 +19,11 @@ interface Props {
 }
 
 const STAGES = [
-  { key: 'received', labelEn: 'Received', labelHi: 'प्राप्त हुआ', icon: '📥' },
-  { key: 'under_review', labelEn: 'Under Review', labelHi: 'समीक्षाधीन', icon: '🔍' },
-  { key: 'action_assigned', labelEn: 'Action Assigned', labelHi: 'कार्रवाई सौंपी गई', icon: '🛠️' },
-  { key: 'action_taken', labelEn: 'Action Taken', labelHi: 'कार्रवाई की गई', icon: '🚧' },
-  { key: 'resolved', labelEn: 'Hazard Resolved', labelHi: 'जोखिम का समाधान', icon: '✅' },
+  { key: 'received', labelEn: 'Received', labelHi: 'प्राप्त हुआ', icon: '1' },
+  { key: 'under_review', labelEn: 'Under Review', labelHi: 'समीक्षाधीन', icon: '2' },
+  { key: 'action_assigned', labelEn: 'Action Assigned', labelHi: 'कार्रवाई सौंपी गई', icon: '3' },
+  { key: 'action_taken', labelEn: 'Action Taken', labelHi: 'कार्रवाई की गई', icon: '4' },
+  { key: 'resolved', labelEn: 'Hazard Resolved', labelHi: 'जोखिम का समाधान', icon: '✓' },
 ];
 
 export const ReportStatusTrackerModal: React.FC<Props> = ({ visible, onClose, initialCode }) => {
@@ -39,20 +39,17 @@ export const ReportStatusTrackerModal: React.FC<Props> = ({ visible, onClose, in
     try {
       const data = await getIncidentTracker(code.trim());
       setTrackerData(data);
-    } catch (err: any) {
-      setError(err.message || 'Report not found. Please check your tracking code.');
+    } catch (e: any) {
+      setError(e.message || 'Unable to locate report with this code.');
       setTrackerData(null);
     } finally {
       setLoading(false);
     }
   };
 
-  const getStageIndex = (stage: string) => {
-    const idx = STAGES.findIndex((s) => s.key === stage);
-    return idx >= 0 ? idx : 0;
-  };
-
-  const currentStageIndex = trackerData ? getStageIndex(trackerData.lifecycle_stage) : 0;
+  const currentStageIndex = trackerData
+    ? STAGES.findIndex((s) => s.key === trackerData.status)
+    : -1;
 
   return (
     <Modal visible={visible} animationType="slide" transparent>
@@ -60,7 +57,7 @@ export const ReportStatusTrackerModal: React.FC<Props> = ({ visible, onClose, in
         <View style={styles.container}>
           <View style={styles.header}>
             <View>
-              <Text style={styles.title}>📍 Near-Miss Status Tracker</Text>
+              <Text style={styles.title}>Near-Miss Status Tracker</Text>
               <Text style={styles.subtitle}>रिपोर्ट की स्थिति जानें (Never lost in a black hole)</Text>
             </View>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
@@ -88,7 +85,7 @@ export const ReportStatusTrackerModal: React.FC<Props> = ({ visible, onClose, in
 
           {error && (
             <View style={styles.errorBox}>
-              <Text style={styles.errorText}>⚠️ {error}</Text>
+              <Text style={styles.errorText}>{error}</Text>
             </View>
           )}
 
@@ -98,7 +95,7 @@ export const ReportStatusTrackerModal: React.FC<Props> = ({ visible, onClose, in
                 <View style={styles.resultHeader}>
                   <View>
                     <Text style={styles.resultId}>
-                      {trackerData.is_anonymous ? '🔒 Anonymous Report' : `Ticket #${trackerData.ticket_id.slice(0, 8)}`}
+                      {trackerData.is_anonymous ? 'Anonymous Report' : `Ticket #${trackerData.ticket_id.slice(0, 8)}`}
                     </Text>
                     {trackerData.anonymous_tracking_code && (
                       <Text style={styles.trackingCodePill}>
@@ -119,7 +116,7 @@ export const ReportStatusTrackerModal: React.FC<Props> = ({ visible, onClose, in
                 {trackerData.is_anonymous && (
                   <View style={styles.anonymousNotice}>
                     <Text style={styles.anonymousNoticeText}>
-                      🛡️ Protected No-Blame Report: Attributed to Shift {trackerData.shift || 'General'} & Zone {trackerData.zone_id || 'General'}. Identity strictly unrecorded.
+                      Protected No-Blame Report: Attributed to Shift {trackerData.shift || 'General'} & Zone {trackerData.zone_id || 'General'}. Identity strictly unrecorded.
                     </Text>
                   </View>
                 )}
@@ -157,18 +154,18 @@ export const ReportStatusTrackerModal: React.FC<Props> = ({ visible, onClose, in
 
                 {/* Corrective Action Section */}
                 <View style={styles.actionSection}>
-                  <Text style={styles.actionHeader}>🛠️ Corrective Action & Closure Status</Text>
+                  <Text style={styles.actionHeader}>Corrective Action & Closure Status</Text>
                   {trackerData.corrective_action ? (
                     <View style={styles.actionDetails}>
                       <Text style={styles.actionTitle}>Assigned Fix:</Text>
                       <Text style={styles.actionValue}>{trackerData.corrective_action}</Text>
                       <View style={styles.actionRow}>
                         <Text style={styles.actionMeta}>
-                          👤 Assigned To: <Text style={styles.actionHighlight}>{trackerData.assigned_to || 'Maintenance Team'}</Text>
+                          Assigned To: <Text style={styles.actionHighlight}>{trackerData.assigned_to || 'Maintenance Team'}</Text>
                         </Text>
                         {trackerData.due_date && (
                           <Text style={styles.actionMeta}>
-                            📅 Target: <Text style={styles.actionHighlight}>{new Date(trackerData.due_date).toLocaleDateString()}</Text>
+                            Target: <Text style={styles.actionHighlight}>{new Date(trackerData.due_date).toLocaleDateString()}</Text>
                           </Text>
                         )}
                       </View>
@@ -181,11 +178,11 @@ export const ReportStatusTrackerModal: React.FC<Props> = ({ visible, onClose, in
 
                   {trackerData.closure_notes && (
                     <View style={styles.closureBox}>
-                      <Text style={styles.closureTitle}>✅ Verification & Resolution Evidence:</Text>
+                      <Text style={styles.closureTitle}>Verification & Resolution Evidence:</Text>
                       <Text style={styles.closureNotes}>{trackerData.closure_notes}</Text>
                       {trackerData.closure_time_hours != null && (
                         <Text style={styles.turnaroundPill}>
-                          ⚡ Hazard permanently fixed in {trackerData.closure_time_hours} hours from reporting
+                          Hazard permanently fixed in {trackerData.closure_time_hours} hours from reporting
                         </Text>
                       )}
                     </View>
@@ -195,7 +192,7 @@ export const ReportStatusTrackerModal: React.FC<Props> = ({ visible, onClose, in
                 {/* Audit Event Trail */}
                 {trackerData.history_events.length > 0 && (
                   <View style={styles.auditSection}>
-                    <Text style={styles.auditTitle}>📜 Activity Log</Text>
+                    <Text style={styles.auditTitle}>Activity Log</Text>
                     {trackerData.history_events.map((evt) => (
                       <View key={evt.id} style={styles.auditRow}>
                         <Text style={styles.auditAction}>• {evt.action.replace(/_/g, ' ')}</Text>
@@ -210,7 +207,6 @@ export const ReportStatusTrackerModal: React.FC<Props> = ({ visible, onClose, in
               </View>
             ) : (
               <View style={styles.emptyState}>
-                <Text style={styles.emptyIcon}>🔍</Text>
                 <Text style={styles.emptyTitle}>Track Any Safety Report</Text>
                 <Text style={styles.emptySubtitle}>
                   Every report filed gets a tracking code. Use it here to see what action maintenance and safety teams took to protect your workplace.

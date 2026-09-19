@@ -67,7 +67,6 @@ export const KioskLoginScreen: React.FC<Props> = ({
     <ScrollView contentContainerStyle={styles.container}>
       {/* Kiosk Station Header */}
       <View style={styles.stationBadge}>
-        <Text style={styles.stationIcon}>🏢</Text>
         <View>
           <Text style={styles.stationLabel}>SHARED PLANT TERMINAL</Text>
           <Text style={styles.stationTitle}>{stationId}</Text>

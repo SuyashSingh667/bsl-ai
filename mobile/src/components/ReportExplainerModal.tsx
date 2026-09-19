@@ -16,7 +16,7 @@ interface Props {
 const STEPS = [
   {
     step: 1,
-    icon: '⚡',
+    icon: '1',
     titleEn: 'Instant Triage & Receipt',
     titleHi: 'तत्काल प्राप्ति और समीक्षा',
     descEn: 'Your report immediately registers with the Bokaro plant control room. High-priority hazards alert shift emergency teams at second zero.',
@@ -26,7 +26,7 @@ const STEPS = [
   },
   {
     step: 2,
-    icon: '🛡️',
+    icon: '2',
     titleEn: 'No-Blame Hazard Assessment',
     titleHi: 'बिना दोषारोपण के जोखिम मूल्यांकन',
     descEn: 'Safety engineers evaluate the physical hazard, gas line, or machine condition. The investigation focuses 100% on fixing the equipment, NOT finding fault with workers.',
@@ -36,7 +36,7 @@ const STEPS = [
   },
   {
     step: 3,
-    icon: '🛠️',
+    icon: '3',
     titleEn: 'Work Order & Action Assignment',
     titleHi: 'मरम्मत कार्य आदेश और समय-सीमा',
     descEn: 'A designated maintenance supervisor or area engineer is assigned a corrective action with a mandatory completion due date.',
@@ -46,7 +46,7 @@ const STEPS = [
   },
   {
     step: 4,
-    icon: '✅',
+    icon: '4',
     titleEn: 'Verified Closure & Safer Floor',
     titleHi: 'सत्यापित समाधान और सुरक्षित कार्यस्थल',
     descEn: 'Maintenance uploads proof of repair. The hazard is formally closed, and the community impact score updates to celebrate another hazard prevented.',
@@ -65,7 +65,7 @@ export const ReportExplainerModal: React.FC<Props> = ({ visible, onClose }) => {
         <View style={styles.container}>
           <View style={styles.header}>
             <View>
-              <Text style={styles.title}>📖 What Happens to My Report?</Text>
+              <Text style={styles.title}>What Happens to My Report?</Text>
               <Text style={styles.subtitle}>मेरी रिपोर्ट का क्या होता है? (पारदर्शिता गारंटी)</Text>
             </View>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
@@ -103,7 +103,6 @@ export const ReportExplainerModal: React.FC<Props> = ({ visible, onClose }) => {
 
           {/* Core Guarantee Banner */}
           <View style={styles.guaranteeBanner}>
-            <Text style={styles.guaranteeIcon}>🛡️</Text>
             <View style={styles.guaranteeTextContainer}>
               <Text style={styles.guaranteeHeading}>BSL No-Blame Safety Commitment</Text>
               <Text style={styles.guaranteeSub}>
@@ -117,7 +116,6 @@ export const ReportExplainerModal: React.FC<Props> = ({ visible, onClose }) => {
               <View key={s.step} style={styles.stepCard}>
                 <View style={styles.stepHeader}>
                   <View style={styles.stepBadge}>
-                    <Text style={styles.stepIcon}>{s.icon}</Text>
                     <Text style={styles.stepNumber}>Step {s.step}</Text>
                   </View>
                   <View style={styles.stepTitles}>
@@ -149,7 +147,7 @@ export const ReportExplainerModal: React.FC<Props> = ({ visible, onClose }) => {
 
             <View style={styles.footerNote}>
               <Text style={styles.footerNoteText}>
-                🤝 Together, every near-miss reported prevents a serious injury tomorrow.
+                Together, every near-miss reported prevents a serious injury tomorrow.
               </Text>
             </View>
           </ScrollView>
