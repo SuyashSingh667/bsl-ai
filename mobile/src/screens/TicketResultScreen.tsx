@@ -221,11 +221,25 @@ export const TicketResultScreen: React.FC<TicketResultScreenProps> = ({
               </Text>
             </View>
             <View style={styles.factRow}>
+              <Text style={styles.factLabel}>Model & License:</Text>
+              <Text style={[styles.factValue, { color: '#38bdf8' }]}>
+                {visualAnalysis.model_version || 'BSL-Vision-v2.5'} ({visualAnalysis.detector_license || 'Apache-2.0'})
+              </Text>
+            </View>
+            <View style={styles.factRow}>
               <Text style={styles.factLabel}>Model Confidence:</Text>
               <Text style={styles.factValue}>
                 {Math.round((visualAnalysis.confidence || 0) * 100)}%
               </Text>
             </View>
+            {visualAnalysis.image_sha256 && (
+              <View style={styles.factRow}>
+                <Text style={styles.factLabel}>SHA-256 Hash:</Text>
+                <Text style={[styles.factValue, { fontSize: 10, fontFamily: 'monospace' }]}>
+                  {visualAnalysis.image_sha256.substring(0, 16)}...
+                </Text>
+              </View>
+            )}
             <View style={styles.factRow}>
               <Text style={styles.factLabel}>Risk Score Impact:</Text>
               <Text style={[
@@ -235,6 +249,32 @@ export const TicketResultScreen: React.FC<TicketResultScreenProps> = ({
                 {visualAnalysis.is_valid_evidence ? 'Elevated via visual proof' : 'Held neutral (NOT inflated)'}
               </Text>
             </View>
+
+            {/* Localized Object Bounding Boxes */}
+            {visualAnalysis.evidence_boxes && visualAnalysis.evidence_boxes.length > 0 && (
+              <View style={styles.boxChipsContainer}>
+                <Text style={styles.boxChipsHeader}>Detected Objects & Localization:</Text>
+                <View style={styles.boxChipsRow}>
+                  {visualAnalysis.evidence_boxes.map((box: any, bIdx: number) => (
+                    <View key={bIdx} style={[styles.boxChip, { borderColor: box.color || '#3b82f6' }]}>
+                      <View style={[styles.boxChipDot, { backgroundColor: box.color || '#3b82f6' }]} />
+                      <Text style={styles.boxChipText}>
+                        {box.label} ({Math.round((box.confidence || 0) * 100)}%)
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
+
+            {/* Experimental Class Warning Banner */}
+            {visualAnalysis.is_experimental && (
+              <View style={styles.experimentalBanner}>
+                <Text style={styles.experimentalBannerText}>
+                  ⚠️ EXPERIMENTAL / NO VERIFIED PLANT DATA: Model prediction for '{visualAnalysis.detected_event}' is unvalidated. Do not rely on AI for this hazard class.
+                </Text>
+              </View>
+            )}
 
             <Text style={styles.aiSummaryText}>
               {visualAnalysis.visual_summary}
@@ -589,5 +629,61 @@ const styles = StyleSheet.create({
     color: '#f43f5e',
     fontSize: 16,
     fontWeight: '900',
+  },
+  boxChipsContainer: {
+    marginTop: 10,
+    marginBottom: 8,
+    backgroundColor: '#0f172a',
+    padding: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  boxChipsHeader: {
+    color: '#94a3b8',
+    fontSize: 11,
+    fontWeight: '700',
+    marginBottom: 6,
+    textTransform: 'uppercase',
+  },
+  boxChipsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  boxChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1e293b',
+    borderWidth: 1,
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  boxChipDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 6,
+  },
+  boxChipText: {
+    color: '#f1f5f9',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  experimentalBanner: {
+    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+    borderWidth: 1,
+    borderColor: '#ef4444',
+    borderRadius: 8,
+    padding: 8,
+    marginTop: 8,
+    marginBottom: 6,
+  },
+  experimentalBannerText: {
+    color: '#fca5a5',
+    fontSize: 11,
+    fontWeight: '700',
+    lineHeight: 15,
   },
 });

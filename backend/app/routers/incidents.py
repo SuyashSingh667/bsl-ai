@@ -117,8 +117,8 @@ def _create_ticket(
     entities = entity_extraction.extract(text_en, stated_zone_id=zone_id)
     effective_zone = zone_id or entities.get("mentioned_zone")
 
-    # Photo or video upload is compulsory in necessary cases (critical physical hazards or emergencies)
-    requires_photo = (category in CATEGORIES_REQUIRING_PHOTO) or (report_type == "emergency")
+    # Phase 3 Invariant: Photo or video upload is strictly optional and never required to report/dispatch
+    requires_photo = False
 
     media_type = None
     if photo_proof_path:

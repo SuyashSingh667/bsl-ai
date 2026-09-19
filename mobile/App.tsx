@@ -36,10 +36,9 @@ export default function App() {
     if (isEmergency) {
       // FAST-PATH: Acute emergencies immediately show personal safety directives and emergency dispatch status
       setStep('precautions');
-    } else if (newTicket.requires_photo_proof) {
-      setStep('media_evidence');
     } else {
-      setStep('verification');
+      // Offer optional media evidence capture (can be skipped with 1 tap)
+      setStep('media_evidence');
     }
   };
 

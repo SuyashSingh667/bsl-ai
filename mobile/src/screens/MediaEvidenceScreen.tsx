@@ -116,17 +116,14 @@ export const MediaEvidenceScreen: React.FC<MediaEvidenceScreenProps> = ({
       <StepIndicator currentStep={2} />
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.headerBadge}>
-          <Text style={styles.headerBadgeText}>📸 MANDATORY EVIDENCE PROTOCOL</Text>
+        <View style={[styles.headerBadge, { borderColor: 'rgba(59, 130, 246, 0.3)', backgroundColor: 'rgba(59, 130, 246, 0.15)' }]}>
+          <Text style={[styles.headerBadgeText, { color: '#60a5fa' }]}>📸 FIELD EVIDENCE (OPTIONAL)</Text>
         </View>
 
-        <Text style={styles.title}>Physical Evidence Capture</Text>
+        <Text style={styles.title}>Physical Evidence Attachment</Text>
         <Text style={styles.subtitle}>
-          BSL Safety Protocol requires a clear photograph or video for{' '}
-          <Text style={styles.highlightText}>
-            {ticket.predicted_category?.replace('_', ' ').toUpperCase() || 'THIS INCIDENT'}
-          </Text>{' '}
-          to verify hazard boundaries before dispatching crews.
+          Uploading a photograph or video is <Text style={[styles.highlightText, { color: '#60a5fa' }]}>OPTIONAL</Text>.
+          Visual proof helps AI and emergency crews locate hazards faster, but is never required to submit a report.
         </Text>
 
         {/* Media Preview or Capture Options */}
@@ -199,15 +196,15 @@ export const MediaEvidenceScreen: React.FC<MediaEvidenceScreenProps> = ({
           </View>
         )}
 
-        {/* Skip Button for Dangerous Situations */}
+        {/* Skip Button: Evidence upload is optional */}
         <View style={styles.skipContainer}>
           <TouchableOpacity style={styles.skipButton} onPress={onSkip}>
             <Text style={styles.skipButtonText}>
-              ⚠️ Unsafe to Photograph? Skip to Verification ➔
+              Skip & Continue to Verification ➔
             </Text>
           </TouchableOpacity>
           <Text style={styles.skipNotice}>
-            Only skip if taking a photograph puts you or other workers in immediate physical danger.
+            Photo/video proof is optional and never required. You can proceed directly to report verification at any time.
           </Text>
         </View>
       </ScrollView>

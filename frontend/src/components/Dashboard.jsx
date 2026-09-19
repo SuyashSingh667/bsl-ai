@@ -338,10 +338,11 @@ export default function Dashboard() {
                 )}
               </div>
 
-              {/* Photographic or Video Field Evidence */}
+              {/* Photographic or Video Field Evidence & AI Vision Dossier */}
               {(selectedTicket.photo_url || selectedTicket.media_url || selectedTicket.photo_proof_path) ? (() => {
                 const src = photoUrl(selectedTicket.media_url || selectedTicket.photo_url || selectedTicket.photo_proof_path);
                 const isVid = selectedTicket.media_type === "video" || /\.(mp4|webm|mov|mkv|avi)(\?.*)?$/i.test(src || "");
+                const vAnalysis = selectedTicket.visual_analysis || selectedTicket.safety_report?.visual_analysis;
                 return (
                   <div className="inspector-section photo-inspector-section">
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
@@ -368,16 +369,102 @@ export default function Dashboard() {
                         File: <code>{selectedTicket.photo_proof_path?.split("/").pop() || "evidence_file"}</code> ({isVid ? "Recorded field video" : "Click image to view full resolution"})
                       </p>
                     </div>
+
+                    {/* AI Visual Detection & Localization Dossier */}
+                    {vAnalysis && (
+                      <div style={{ marginTop: "1rem", padding: "0.85rem", background: "#0b1329", borderRadius: "8px", border: "1px solid #1e293b" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
+                          <span style={{ fontWeight: "700", color: "#e2e8f0", fontSize: "0.9rem" }}>🤖 AI Visual Hazard Localization</span>
+                          <span style={{
+                            padding: "2px 8px",
+                            borderRadius: "4px",
+                            fontSize: "0.75rem",
+                            fontWeight: "800",
+                            background: vAnalysis.is_valid_evidence ? "rgba(16, 185, 129, 0.15)" : "rgba(245, 158, 11, 0.15)",
+                            color: vAnalysis.is_valid_evidence ? "#34d399" : "#fbbf24",
+                            border: `1px solid ${vAnalysis.is_valid_evidence ? "#10b981" : "#f59e0b"}`,
+                          }}>
+                            {vAnalysis.is_valid_evidence ? "✓ CORROBORATED" : "⚠️ NO VISUAL CORROBORATION"}
+                          </span>
+                        </div>
+
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem", fontSize: "0.8rem", color: "#94a3b8", marginBottom: "0.5rem" }}>
+                          <div><strong>Detected Event:</strong> <span style={{ color: "#f8fafc", textTransform: "capitalize" }}>{vAnalysis.detected_event?.replace(/_/g, " ")}</span></div>
+                          <div><strong>Confidence:</strong> <span style={{ color: "#38bdf8", fontWeight: "700" }}>{Math.round((vAnalysis.confidence || 0) * 100)}%</span></div>
+                          <div><strong>Detector Model:</strong> <span style={{ color: "#cbd5e1" }}>{vAnalysis.model_version || "BSL-Vision-v2.5"}</span></div>
+                          <div><strong>License:</strong> <span style={{ color: "#34d399", fontWeight: "700" }}>{vAnalysis.detector_license || "Apache-2.0"}</span></div>
+                          {vAnalysis.image_sha256 && (
+                            <div style={{ gridColumn: "span 2" }}>
+                              <strong>SHA-256 Fingerprint:</strong> <code style={{ color: "#93c5fd", fontSize: "0.72rem" }}>{vAnalysis.image_sha256}</code>
+                            </div>
+                          )}
+                          {vAnalysis.video_metadata && (
+                            <div style={{ gridColumn: "span 2", color: "#a5b4fc" }}>
+                              <strong>Video Sampling:</strong> {vAnalysis.video_metadata.sampled_frames_count} frames sampled across duration (Keyframe @ {vAnalysis.video_metadata.key_frame_timestamp_s}s)
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Localized Detection Boxes */}
+                        {vAnalysis.evidence_boxes && vAnalysis.evidence_boxes.length > 0 && (
+                          <div style={{ marginTop: "0.5rem", paddingTop: "0.5rem", borderTop: "1px solid #1e293b" }}>
+                            <span style={{ fontSize: "0.75rem", color: "#64748b", textTransform: "uppercase", fontWeight: "700", display: "block", marginBottom: "0.3rem" }}>
+                              Localized Detections & PPE:
+                            </span>
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+                              {vAnalysis.evidence_boxes.map((b, idx) => (
+                                <span key={idx} style={{
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  padding: "2px 8px",
+                                  borderRadius: "4px",
+                                  fontSize: "0.75rem",
+                                  background: "#1e293b",
+                                  color: "#f8fafc",
+                                  border: `1px solid ${b.color || "#3b82f6"}`,
+                                }}>
+                                  <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: b.color || "#3b82f6", marginRight: "6px" }}></span>
+                                  {b.label} ({Math.round((b.confidence || 0) * 100)}%)
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Experimental Warning */}
+                        {vAnalysis.is_experimental && (
+                          <div style={{
+                            marginTop: "0.5rem",
+                            padding: "0.5rem 0.75rem",
+                            borderRadius: "6px",
+                            background: "rgba(239, 68, 68, 0.15)",
+                            border: "1px solid #ef4444",
+                            color: "#fca5a5",
+                            fontSize: "0.75rem",
+                            fontWeight: "600",
+                          }}>
+                            ⚠️ EXPERIMENTAL / NO VERIFIED PLANT TRAINING DATA: Detection for '{vAnalysis.detected_event}' is unvalidated. Do not rely on AI for this hazard class.
+                          </div>
+                        )}
+
+                        <p style={{ margin: "0.5rem 0 0", fontSize: "0.78rem", color: "#cbd5e1", lineHeight: "1.3" }}>
+                          {vAnalysis.visual_summary}
+                        </p>
+                        <p style={{ margin: "0.3rem 0 0", fontSize: "0.7rem", color: "#64748b", fontStyle: "italic" }}>
+                          {vAnalysis.advisory_notice || "AI Vision output is evidence-only under Apache-2.0 license."}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 );
-              })() : selectedTicket.requires_photo_proof ? (
-                <div className="inspector-section photo-inspector-section">
-                  <h4>📸🎥 Visual Field Evidence</h4>
-                  <div className="missing-photo-alert">
-                    ⚠ <strong>MANDATORY PROOF REQUIRED:</strong> This incident category requires visual proof (photo or video), but no evidence has been attached yet.
-                  </div>
+              })() : (
+                <div className="inspector-section photo-inspector-section" style={{ opacity: 0.75 }}>
+                  <h4>📸 Visual Field Evidence</h4>
+                  <p style={{ fontSize: "0.85rem", color: "#94a3b8", margin: "0.25rem 0" }}>
+                    <em>Optional evidence: No photo or video proof attached to this report. Incident processed via verbal interview findings.</em>
+                  </p>
                 </div>
-              ) : null}
+              )}
 
               {/* Spatial Impact Assessment */}
               {selectedTicket.impact_assessment?.applicable && (
