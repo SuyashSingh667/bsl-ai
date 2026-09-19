@@ -177,3 +177,19 @@ export async function getTicket(ticketId: string): Promise<Ticket> {
   }
   return res.json();
 }
+
+export async function synthesizeSpeech(text: string, language: string = 'hi'): Promise<string> {
+  const base = await getApiBaseUrl();
+  const res = await fetch(`${base}/tts`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text, language }),
+  });
+  if (!res.ok) {
+    const txt = await res.text();
+    throw new Error(`TTS synthesis failed: ${txt}`);
+  }
+  const data = await res.json();
+  const path = data.audio_path;
+  return path.startsWith('http') ? path : `${base}${path}`;
+}

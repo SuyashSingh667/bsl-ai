@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
+  ActivityIndicator,
   ScrollView,
   StyleSheet,
   Text,
@@ -7,7 +8,7 @@ import {
   View,
 } from 'react-native';
 import { StepIndicator } from '../components/StepIndicator';
-import { Ticket } from '../services/api';
+import { synthesizeSpeech, Ticket } from '../services/api';
 import { getApiBaseUrl } from '../services/config';
 import { soundPlayer } from '../services/soundPlayer';
 
@@ -16,28 +17,102 @@ interface PrecautionaryMeasuresScreenProps {
   onProceedToResult: () => void;
 }
 
+const DEFAULT_HINDI_MEASURES = [
+  {
+    id: 'evacuate',
+    icon: '🏃',
+    title: 'Immediate Evacuation & Cordon',
+    title_native: 'तत्काल निकासी एवं सुरक्षा घेरा',
+    text_native: 'खतरे के प्रभाव क्षेत्र से तुरंत सुरक्षित दूरी (कम से कम 100 मीटर) पर जाएं और हवा की विपरीत दिशा में रहें।',
+    checklist_label_native: 'सुरक्षा घेरा तुरंत स्थापित किया',
+  },
+  {
+    id: 'life_safety_ppe',
+    icon: '🛡️',
+    title: 'Mandatory PPE Compliance',
+    title_native: 'अनिवार्य सुरक्षा उपकरण (PPE)',
+    text_native: 'उचित सुरक्षा उपकरण (SCBA / रासायनिक चश्मा / सेफ्टी सूट) पहने बिना प्रभावित उपकरण के समीप न जाएं।',
+    checklist_label_native: 'सुरक्षा गियर की पुष्टि की गई',
+  },
+  {
+    id: 'donts',
+    icon: '⛔',
+    title: 'Prohibited Immediate Actions',
+    title_native: 'प्रतिबंधित गतिविधियां',
+    text_native: 'बिजली या तेल की आग पर पानी न डालें; बिना लिखित अनुमति मशीन को दोबारा चालू करने का प्रयास न करें।',
+    checklist_label_native: 'गलत कदम उठाने से परहेज किया',
+  },
+  {
+    id: 'emergency_contacts',
+    icon: '📞',
+    title: 'Incident Command Notification',
+    title_native: 'इमरजेंसी कंट्रोल एवं एम्बुलेंस',
+    text_native: 'प्लांट फायर स्टेशन (101) एवं मेडिकल ट्रॉमा एम्बुलेंस (102) को सूचित करें और प्रभावित कर्मियों की हाजिरी लें।',
+    checklist_label_native: 'कंट्रोल रूम 101/102 को सूचित किया',
+  },
+];
+
 export const PrecautionaryMeasuresScreen: React.FC<PrecautionaryMeasuresScreenProps> = ({
   ticket,
   onProceedToResult,
 }) => {
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
-  const [isPlayingAudio, setIsPlayingAudio] = useState<boolean>(false);
+  const [isPlayingFullAudio, setIsPlayingFullAudio] = useState<boolean>(false);
+  const [playingMeasureKey, setPlayingMeasureKey] = useState<string | number | null>(null);
+  const [loadingMeasureKey, setLoadingMeasureKey] = useState<string | number | null>(null);
 
+  const isHindi = !ticket.language || ticket.language === 'hi';
   const precautions = ticket.precautionary_measures;
-  const measuresList: string[] =
+  const measuresList: any[] =
+    precautions?.measures ||
     precautions?.measures_localized ||
-    precautions?.measures || [
-      'Immediately evacuate upwind of suspected hazard release.',
-      'Notify Control Room & establish 360-degree perimeter cordon.',
-      'Do not approach unisolated equipment without SCBA / PPE gear.',
-    ];
+    DEFAULT_HINDI_MEASURES;
 
-  const playGuidanceAudio = async (targetUri?: string) => {
+  // Play full spoken summary audio briefing
+  const playFullGuidanceAudio = async (targetUri?: string) => {
     const uriToPlay = targetUri || audioUrl;
     if (!uriToPlay) return;
+    setPlayingMeasureKey(null);
     await soundPlayer.playUrl(uriToPlay, (playing) => {
-      setIsPlayingAudio(playing);
+      setIsPlayingFullAudio(playing);
     });
+  };
+
+  // Play specific individual measure card aloud in native language
+  const playIndividualMeasureAudio = async (m: any, key: string | number) => {
+    try {
+      // If already playing this item, stop it
+      if (playingMeasureKey === key) {
+        await soundPlayer.stop();
+        setPlayingMeasureKey(null);
+        return;
+      }
+
+      await soundPlayer.stop();
+      setIsPlayingFullAudio(false);
+      setLoadingMeasureKey(key);
+
+      // Determine the exact speech text
+      const titleText = typeof m === 'object' ? (m.title_native || m.title || '') : '';
+      const bodyText = typeof m === 'object' ? (m.text_native || m.text || m.checklist_label_native || '') : String(m);
+      const textToSpeak = titleText ? `${titleText}। ${bodyText}` : bodyText;
+
+      const lang = ticket.language || 'hi';
+      const synthesizedUrl = await synthesizeSpeech(textToSpeak, lang);
+
+      setLoadingMeasureKey(null);
+      setPlayingMeasureKey(key);
+
+      await soundPlayer.playUrl(synthesizedUrl, (playing) => {
+        if (!playing) {
+          setPlayingMeasureKey(null);
+        }
+      });
+    } catch (err: any) {
+      setLoadingMeasureKey(null);
+      setPlayingMeasureKey(null);
+      console.warn('Could not read measure aloud:', err);
+    }
   };
 
   useEffect(() => {
@@ -47,8 +122,8 @@ export const PrecautionaryMeasuresScreen: React.FC<PrecautionaryMeasuresScreenPr
         const base = await getApiBaseUrl();
         const fullUrl = path.startsWith('http') ? path : `${base}${path}`;
         setAudioUrl(fullUrl);
-        // Auto-play verbal safety precautions
-        playGuidanceAudio(fullUrl);
+        // Auto-play spoken guidance summary
+        playFullGuidanceAudio(fullUrl);
       }
     };
     resolveAudio();
@@ -59,7 +134,8 @@ export const PrecautionaryMeasuresScreen: React.FC<PrecautionaryMeasuresScreenPr
 
   const handleProceed = async () => {
     await soundPlayer.stop();
-    setIsPlayingAudio(false);
+    setIsPlayingFullAudio(false);
+    setPlayingMeasureKey(null);
     onProceedToResult();
   };
 
@@ -68,51 +144,117 @@ export const PrecautionaryMeasuresScreen: React.FC<PrecautionaryMeasuresScreenPr
       <StepIndicator currentStep={4} />
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
+        {/* Header with Bilingual Title */}
         <View style={styles.alertHeader}>
           <View style={styles.iconCircle}>
             <Text style={styles.iconText}>🛡️</Text>
           </View>
           <View style={styles.headerTitles}>
-            <Text style={styles.title}>Personal Safety Precautions</Text>
+            <Text style={styles.title}>
+              {isHindi ? 'व्यक्तिगत सुरक्षा सावधानियां' : 'Personal Safety Precautions'}
+            </Text>
             <Text style={styles.subtitle}>
-              Grounded in BSL Safety Operating Standard SOP
+              {isHindi
+                ? 'बोकारो स्टील प्लांट मानक संचालन प्रक्रिया (BSL SOP)'
+                : 'Grounded in BSL Safety Operating Standard SOP'}
             </Text>
           </View>
         </View>
 
-        {/* Audio Briefing Button */}
+        {/* Master Audio Briefing Button */}
         {audioUrl && (
           <TouchableOpacity
-            style={[styles.audioBriefingButton, isPlayingAudio && styles.audioBriefingButtonPlaying]}
-            onPress={() => playGuidanceAudio(audioUrl)}
+            style={[styles.audioBriefingButton, isPlayingFullAudio && styles.audioBriefingButtonPlaying]}
+            onPress={() => playFullGuidanceAudio(audioUrl)}
           >
-            <Text style={styles.audioIcon}>{isPlayingAudio ? '🔊' : '🔈'}</Text>
+            <Text style={styles.audioIcon}>{isPlayingFullAudio ? '🔊' : '🔈'}</Text>
             <View style={styles.audioTextWrapper}>
               <Text style={styles.audioButtonTitle}>
-                {isPlayingAudio ? 'Directives Playing Out Loud...' : 'Listen in Your Native Language'}
+                {isPlayingFullAudio
+                  ? 'संपूर्ण सुरक्षा निर्देश सुना जा रहा है...'
+                  : 'संपूर्ण सुरक्षा निर्देश सुनें (Listen to All)'}
               </Text>
               <Text style={styles.audioButtonSub}>
-                {isPlayingAudio ? 'Tap to replay or pause' : 'Tap to hear verbal safety directives through phone speaker'}
+                {isPlayingFullAudio
+                  ? 'रोकने या दोबारा सुनने के लिए टैप करें'
+                  : 'फ़ोन स्पीकर से सभी सुरक्षा उपायों का संक्षिप्त विवरण सुनें'}
               </Text>
             </View>
           </TouchableOpacity>
         )}
 
-        {/* Action Directives Checklist */}
-        <Text style={styles.sectionHeader}>Mandatory Immediate Actions:</Text>
+        {/* Action Directives Section Header */}
+        <View style={styles.sectionHeaderRow}>
+          <Text style={styles.sectionHeader}>
+            {isHindi ? 'अनिवार्य तत्काल कार्रवाई' : 'Mandatory Immediate Actions'}:
+          </Text>
+          <Text style={styles.sectionSubHeader}>
+            {isHindi ? 'प्रत्येक कार्ड को अलग से सुन सकते हैं' : 'Tap 🔊 to read each action aloud'}
+          </Text>
+        </View>
+
+        {/* Action Directives Cards */}
         {measuresList.map((m: any, idx: number) => {
-          const title = typeof m === 'object' ? (m.title_native || m.title || '') : '';
-          const text = typeof m === 'object' ? (m.text_native || m.text || m.checklist_label || JSON.stringify(m)) : String(m);
+          const key = m.id || idx;
+          const isItemPlaying = playingMeasureKey === key;
+          const isItemLoading = loadingMeasureKey === key;
+
+          // Extract native first, fallback to standard
+          const titleNative = typeof m === 'object' ? (m.title_native || m.title || '') : '';
+          const titleEn = typeof m === 'object' && m.title_native && m.title && m.title !== m.title_native ? m.title : '';
+          const textNative = typeof m === 'object' ? (m.text_native || m.text || m.checklist_label_native || JSON.stringify(m)) : String(m);
+          const checklistLabel = typeof m === 'object' ? (m.checklist_label_native || m.checklist_label || '') : '';
           const icon = typeof m === 'object' && m.icon ? m.icon : '⚠️';
 
           return (
-            <View key={idx} style={styles.measureItem}>
+            <View
+              key={idx}
+              style={[styles.measureItem, isItemPlaying && styles.measureItemPlaying]}
+            >
               <View style={styles.bulletNumber}>
-                <Text style={styles.bulletText}>{icon || idx + 1}</Text>
+                <Text style={styles.bulletText}>{icon}</Text>
               </View>
+
               <View style={styles.measureContent}>
-                {title ? <Text style={styles.measureTitle}>{title}</Text> : null}
-                <Text style={styles.measureText}>{text}</Text>
+                {/* Titles */}
+                <View style={styles.titleRow}>
+                  <Text style={styles.measureTitle}>{titleNative || `कार्रवाई ${idx + 1}`}</Text>
+                  {titleEn ? <Text style={styles.measureTitleSub}>({titleEn})</Text> : null}
+                </View>
+
+                {/* Body Text in Native Language */}
+                <Text style={styles.measureText}>{textNative}</Text>
+
+                {/* Action Checklist Tag if available */}
+                {checklistLabel ? (
+                  <View style={styles.checklistBadge}>
+                    <Text style={styles.checklistBadgeText}>✓ {checklistLabel}</Text>
+                  </View>
+                ) : null}
+
+                {/* Dedicated Read Aloud Button for this Action */}
+                <TouchableOpacity
+                  style={[
+                    styles.readAloudButton,
+                    isItemPlaying && styles.readAloudButtonPlaying,
+                  ]}
+                  onPress={() => playIndividualMeasureAudio(m, key)}
+                  disabled={isItemLoading}
+                  activeOpacity={0.8}
+                >
+                  {isItemLoading ? (
+                    <ActivityIndicator size="small" color="#38bdf8" />
+                  ) : (
+                    <Text style={styles.readAloudIcon}>{isItemPlaying ? '⏹️' : '🔊'}</Text>
+                  )}
+                  <Text style={styles.readAloudText}>
+                    {isItemLoading
+                      ? 'आवाज़ तैयार हो रही है...'
+                      : isItemPlaying
+                      ? 'रोकें (Stop Reading)'
+                      : 'इसे बोलकर सुनें (Read Aloud)'}
+                  </Text>
+                </TouchableOpacity>
               </View>
             </View>
           );
@@ -120,7 +262,9 @@ export const PrecautionaryMeasuresScreen: React.FC<PrecautionaryMeasuresScreenPr
 
         {/* Completion Proceed Button */}
         <TouchableOpacity style={styles.proceedButton} onPress={handleProceed}>
-          <Text style={styles.proceedButtonText}>View Final Safety Ticket & Dossier ➔</Text>
+          <Text style={styles.proceedButtonText}>
+            {isHindi ? 'अंतिम सुरक्षा टिकट एवं डॉसियर देखें ➔' : 'View Final Safety Ticket & Dossier ➔'}
+          </Text>
         </TouchableOpacity>
       </ScrollView>
     </View>
@@ -139,7 +283,7 @@ const styles = StyleSheet.create({
   alertHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 18,
   },
   iconCircle: {
     width: 48,
@@ -158,9 +302,9 @@ const styles = StyleSheet.create({
   },
   title: {
     color: '#ffffff',
-    fontSize: 20,
+    fontSize: 19,
     fontWeight: '800',
-    marginBottom: 2,
+    marginBottom: 3,
   },
   subtitle: {
     color: '#38bdf8',
@@ -175,10 +319,10 @@ const styles = StyleSheet.create({
     padding: 16,
     borderWidth: 1.5,
     borderColor: '#38bdf8',
-    marginBottom: 22,
+    marginBottom: 20,
   },
   audioBriefingButtonPlaying: {
-    backgroundColor: 'rgba(56, 189, 248, 0.1)',
+    backgroundColor: 'rgba(56, 189, 248, 0.15)',
     borderColor: '#0284c7',
   },
   audioIcon: {
@@ -198,61 +342,121 @@ const styles = StyleSheet.create({
     color: '#94a3b8',
     fontSize: 11,
   },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
   sectionHeader: {
     color: '#cbd5e1',
     fontSize: 13,
-    fontWeight: '700',
-    marginBottom: 12,
+    fontWeight: '800',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
+  },
+  sectionSubHeader: {
+    color: '#38bdf8',
+    fontSize: 11,
+    fontWeight: '600',
   },
   measureItem: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     backgroundColor: '#0c1626',
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 10,
-    borderWidth: 1,
+    borderRadius: 14,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1.5,
     borderColor: '#1e293b',
   },
+  measureItemPlaying: {
+    borderColor: '#38bdf8',
+    backgroundColor: 'rgba(56, 189, 248, 0.08)',
+  },
   bulletNumber: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: 'rgba(56, 189, 248, 0.2)',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(56, 189, 248, 0.15)',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
     marginTop: 2,
   },
   bulletText: {
-    color: '#38bdf8',
-    fontSize: 11,
-    fontWeight: '800',
+    fontSize: 16,
   },
   measureContent: {
     flex: 1,
   },
+  titleRow: {
+    marginBottom: 6,
+  },
   measureTitle: {
     color: '#38bdf8',
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '700',
-    marginBottom: 4,
+    lineHeight: 20,
+  },
+  measureTitleSub: {
+    color: '#64748b',
+    fontSize: 11,
+    fontWeight: '600',
+    marginTop: 1,
   },
   measureText: {
-    color: '#ffffff',
-    fontSize: 14,
+    color: '#f1f5f9',
+    fontSize: 13,
     lineHeight: 20,
-    flex: 1,
     fontWeight: '500',
+    marginBottom: 8,
+  },
+  checklistBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(16, 185, 129, 0.3)',
+    marginBottom: 10,
+  },
+  checklistBadgeText: {
+    color: '#34d399',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  readAloudButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1e293b',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  readAloudButtonPlaying: {
+    backgroundColor: 'rgba(56, 189, 248, 0.2)',
+    borderColor: '#38bdf8',
+  },
+  readAloudIcon: {
+    fontSize: 14,
+    marginRight: 6,
+  },
+  readAloudText: {
+    color: '#38bdf8',
+    fontSize: 12,
+    fontWeight: '700',
   },
   proceedButton: {
     backgroundColor: '#059669',
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',
-    marginTop: 24,
+    marginTop: 20,
   },
   proceedButtonText: {
     color: '#ffffff',
