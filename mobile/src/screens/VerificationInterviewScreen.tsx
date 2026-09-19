@@ -15,6 +15,7 @@ import {
   setAudioModeAsync,
   requestRecordingPermissionsAsync,
 } from 'expo-audio';
+import * as FileSystem from 'expo-file-system/legacy';
 import { StepIndicator } from '../components/StepIndicator';
 import {
   getNextQuestion,
@@ -30,8 +31,6 @@ interface VerificationInterviewScreenProps {
   ticket: Ticket;
   onInterviewComplete: (finalTicket: Ticket) => void;
 }
-
-const DEFAULT_SPEAKING_DURATION_SEC = 6;
 
 export const VerificationInterviewScreen: React.FC<VerificationInterviewScreenProps> = ({
   ticket,
@@ -53,22 +52,22 @@ export const VerificationInterviewScreen: React.FC<VerificationInterviewScreenPr
   const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const [isRecording, setIsRecording] = useState<boolean>(false);
   const [isTranscribing, setIsTranscribing] = useState<boolean>(false);
-  const [countdown, setCountdown] = useState<number>(DEFAULT_SPEAKING_DURATION_SEC);
+  const [elapsedSeconds, setElapsedSeconds] = useState<number>(0);
   const [recordedTranscript, setRecordedTranscript] = useState<string | null>(null);
 
-  // Synchronization refs to avoid stale closures in timeouts & intervals
+  // Synchronization refs
   const isRecordingRef = useRef<boolean>(false);
   const isSubmittingRef = useRef<boolean>(false);
-  const countdownTimerRef = useRef<any>(null);
+  const elapsedTimerRef = useRef<any>(null);
   const autoStartTimerRef = useRef<any>(null);
 
   isRecordingRef.current = isRecording;
   isSubmittingRef.current = isSubmitting;
 
-  const clearAllTimers = () => {
-    if (countdownTimerRef.current) {
-      clearInterval(countdownTimerRef.current);
-      countdownTimerRef.current = null;
+  const clearTimers = () => {
+    if (elapsedTimerRef.current) {
+      clearInterval(elapsedTimerRef.current);
+      elapsedTimerRef.current = null;
     }
     if (autoStartTimerRef.current) {
       clearTimeout(autoStartTimerRef.current);
@@ -78,7 +77,7 @@ export const VerificationInterviewScreen: React.FC<VerificationInterviewScreenPr
 
   // Fetch next question from adaptive verification engine
   const fetchNextQ = async () => {
-    clearAllTimers();
+    clearTimers();
     try {
       setIsLoading(true);
       const data = await getNextQuestion(ticket.id, ticket.language);
@@ -94,16 +93,15 @@ export const VerificationInterviewScreen: React.FC<VerificationInterviewScreenPr
           ? data.question_audio_path
           : `${base}${data.question_audio_path}`;
         setAudioSourceUri(fullUrl);
-        // Play question aloud; when finished, automatically trigger voice input
+        // Play question aloud through phone speaker
         playAudio(fullUrl);
       } else {
-        // If no audio file available, auto-start mic after short pause
         if (autoMicRef.current) {
           autoStartTimerRef.current = setTimeout(() => {
-            if (!isSubmittingRef.current) {
+            if (!isSubmittingRef.current && !isRecordingRef.current) {
               startVoiceRecording();
             }
-          }, 1200);
+          }, 1000);
         }
       }
     } catch (err: any) {
@@ -115,7 +113,7 @@ export const VerificationInterviewScreen: React.FC<VerificationInterviewScreenPr
   useEffect(() => {
     fetchNextQ();
     return () => {
-      clearAllTimers();
+      clearTimers();
       soundPlayer.stop();
     };
   }, []);
@@ -123,37 +121,37 @@ export const VerificationInterviewScreen: React.FC<VerificationInterviewScreenPr
   const playAudio = async (targetUri?: string) => {
     const uriToPlay = targetUri || audioSourceUri;
     if (!uriToPlay) return;
-    clearAllTimers();
+    clearTimers();
 
     await soundPlayer.playUrl(uriToPlay, (playing) => {
       setIsPlayingAudio(playing);
-      // When audio finishes speaking, automatically trigger the microphone
+      // When audio question finishes speaking, auto-start microphone (if enabled)
       if (!playing && autoMicRef.current && !isSubmittingRef.current) {
         autoStartTimerRef.current = setTimeout(() => {
           if (!isSubmittingRef.current && !isRecordingRef.current) {
             startVoiceRecording();
           }
-        }, 500);
+        }, 600);
       }
     });
   };
 
-  // Start recording user's voice answer with automatic countdown
+  // Start recording user's voice answer (NO countdown timer)
   const startVoiceRecording = async () => {
     if (isRecordingRef.current || isSubmittingRef.current) return;
-    clearAllTimers();
+    clearTimers();
 
     try {
-      // 1. Stop any playing audio
+      // 1. Stop any currently playing audio
       await soundPlayer.stop();
       setIsPlayingAudio(false);
 
-      // 2. Request microphone permission
+      // 2. Request mic permission
       const perm = await requestRecordingPermissionsAsync();
       if (!perm.granted) {
         Alert.alert(
-          'Microphone Access Needed',
-          'Please allow microphone access to speak your verification answer.'
+          'माइक की अनुमति आवश्यक है (Microphone Needed)',
+          'कृपया उत्तर बोलने के लिए माइक्रोफ़ोन की अनुमति दें।'
         );
         return;
       }
@@ -164,35 +162,35 @@ export const VerificationInterviewScreen: React.FC<VerificationInterviewScreenPr
         playsInSilentMode: true,
       });
 
+      // 4. Give the native audio unit 250ms to settle hardware buffers before starting
+      await new Promise((r) => setTimeout(r, 250));
+
       await audioRecorder.prepareToRecordAsync();
       audioRecorder.record();
 
       setIsRecording(true);
       isRecordingRef.current = true;
       setRecordedTranscript(null);
-      setCountdown(DEFAULT_SPEAKING_DURATION_SEC);
+      setElapsedSeconds(0);
 
-      // 4. Start automatic countdown: submit automatically when time expires
-      let timeLeft = DEFAULT_SPEAKING_DURATION_SEC;
-      countdownTimerRef.current = setInterval(() => {
-        timeLeft -= 1;
-        setCountdown(timeLeft);
-        if (timeLeft <= 0) {
-          clearAllTimers();
-          stopVoiceRecordingAndSubmit();
-        }
+      // 5. Track elapsed speaking time (counting UP so worker can speak naturally)
+      let sec = 0;
+      elapsedTimerRef.current = setInterval(() => {
+        sec += 1;
+        setElapsedSeconds(sec);
       }, 1000);
     } catch (err: any) {
+      console.warn('Microphone start error:', err);
       Alert.alert('Microphone Error', err.message || 'Could not activate microphone.');
       setIsRecording(false);
       isRecordingRef.current = false;
-      clearAllTimers();
+      clearTimers();
     }
   };
 
   // Stop recording, transcribe speech with Whisper, and submit answer
   const stopVoiceRecordingAndSubmit = async () => {
-    clearAllTimers();
+    clearTimers();
     if (!isRecordingRef.current && !isRecording) return;
 
     try {
@@ -201,14 +199,27 @@ export const VerificationInterviewScreen: React.FC<VerificationInterviewScreenPr
       setIsTranscribing(true);
 
       await audioRecorder.stop();
-      const uri = audioRecorder.uri;
+      // Allow native audio system 250ms to finish writing m4a headers
+      await new Promise((r) => setTimeout(r, 250));
 
+      const uri = audioRecorder.uri;
       if (!uri) {
         setIsTranscribing(false);
+        throw new Error('No recorded voice file found.');
+      }
+
+      // Validate audio file size
+      const info = await FileSystem.getInfoAsync(uri);
+      if (info.exists && info.size < 4000) {
+        setIsTranscribing(false);
+        Alert.alert(
+          'आवाज़ बहुत छोटी थी (Recording Too Short)',
+          'कृपया माइक बटन दबाकर स्पष्ट रूप से बोलें, फिर "उत्तर भेजें" दबाएं।'
+        );
         return;
       }
 
-      // Transcribe via Whisper Small model on backend
+      // Transcribe via Whisper model on backend
       const res = await transcribeAudioFile(uri, ticket.language);
       const text = res?.transcript?.trim();
       const textEn = res?.transcript_en?.trim();
@@ -216,8 +227,8 @@ export const VerificationInterviewScreen: React.FC<VerificationInterviewScreenPr
       if (!text) {
         setIsTranscribing(false);
         Alert.alert(
-          'No Speech Heard',
-          'Could not detect speech. Please tap the mic button to speak again, or tap one of the options below.'
+          'आवाज़ नहीं सुनी गई (No Speech Detected)',
+          'स्पष्ट आवाज़ दर्ज नहीं हुई। कृपया फ़ोन के माइक के नज़दीक बोलें या नीचे दिए गए विकल्पों में से चुनें।'
         );
         return;
       }
@@ -229,13 +240,13 @@ export const VerificationInterviewScreen: React.FC<VerificationInterviewScreenPr
       await handleSelectOption(text, textEn);
     } catch (err: any) {
       setIsTranscribing(false);
-      Alert.alert('Voice Submission Error', err.message || 'Failed to process voice response.');
+      Alert.alert('Voice Error', err.message || 'Failed to process voice response.');
     }
   };
 
-  // Cancel current voice recording without submitting
+  // Cancel recording without submitting
   const cancelRecording = async () => {
-    clearAllTimers();
+    clearTimers();
     try {
       if (isRecordingRef.current) {
         await audioRecorder.stop();
@@ -249,7 +260,7 @@ export const VerificationInterviewScreen: React.FC<VerificationInterviewScreenPr
   const handleSelectOption = async (optionText: string, optionTextEn?: string) => {
     if (isSubmittingRef.current || !currentQuestion?.question) return;
 
-    clearAllTimers();
+    clearTimers();
     if (isRecordingRef.current) {
       try { await audioRecorder.stop(); } catch {}
       setIsRecording(false);
@@ -290,12 +301,19 @@ export const VerificationInterviewScreen: React.FC<VerificationInterviewScreenPr
     }
   };
 
+  // Format elapsed seconds as MM:SS
+  const formatTime = (totalSeconds: number) => {
+    const mins = Math.floor(totalSeconds / 60);
+    const secs = totalSeconds % 60;
+    return `${mins < 10 ? '0' : ''}${mins}:${secs < 10 ? '0' : ''}${secs}`;
+  };
+
   return (
     <View style={styles.container}>
       <StepIndicator currentStep={3} />
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Top Header Row with SOP badge and Hands-free toggle */}
+        {/* Top Header Row with SOP badge and Auto-mic toggle */}
         <View style={styles.topMetaRow}>
           <View style={styles.sopBadge}>
             <Text style={styles.sopBadgeText}>
@@ -341,7 +359,7 @@ export const VerificationInterviewScreen: React.FC<VerificationInterviewScreenPr
               )}
             </View>
 
-            {/* Hands-free Automatic Voice Section */}
+            {/* Voice Input Section (NO COUNTDOWN TIMER) */}
             <View
               style={[
                 styles.voiceSection,
@@ -352,16 +370,16 @@ export const VerificationInterviewScreen: React.FC<VerificationInterviewScreenPr
               <View style={styles.voiceHeaderRow}>
                 <Text style={styles.voiceSectionTitle}>
                   {isRecording
-                    ? `🔴 LIVE MIC — LISTENING (${countdown}s)`
+                    ? `🔴 RECORDING VOICE (${formatTime(elapsedSeconds)})`
                     : isTranscribing
                     ? '⏳ TRANSCRIBING ANSWER...'
                     : isPlayingAudio
-                    ? '🔊 LISTENING AFTER QUESTION SPEAKS'
-                    : '🎙️ HANDS-FREE VOICE ANSWER'}
+                    ? '🔊 LISTENING AFTER QUESTION'
+                    : '🎙️ SPEAK YOUR ANSWER (बोलकर उत्तर दें)'}
                 </Text>
                 {isRecording && (
                   <View style={styles.livePulseBadge}>
-                    <Text style={styles.livePulseText}>REC</Text>
+                    <Text style={styles.livePulseText}>LIVE</Text>
                   </View>
                 )}
               </View>
@@ -370,21 +388,17 @@ export const VerificationInterviewScreen: React.FC<VerificationInterviewScreenPr
                 <View style={styles.transcribingBox}>
                   <ActivityIndicator size="small" color="#38bdf8" />
                   <Text style={styles.transcribingText}>
-                    Transcribing with Whisper Neural Model...
+                    Transcribing with Whisper Neural AI...
                   </Text>
                 </View>
               ) : isRecording ? (
                 <View style={styles.recordingActiveContainer}>
                   <Text style={styles.recordingGuideText}>
-                    Speak clearly in {ticket.language === 'hi' ? 'Hindi (हिंदी)' : 'your language'}...
+                    🎙️ बोलें (Speak your answer)...
                   </Text>
-
-                  {/* Progress / countdown pill */}
-                  <View style={styles.countdownPill}>
-                    <Text style={styles.countdownPillText}>
-                      Auto-sending in {countdown} seconds
-                    </Text>
-                  </View>
+                  <Text style={styles.elapsedBadge}>
+                    समय: {formatTime(elapsedSeconds)} (बोलने के बाद नीचे टैप करें)
+                  </Text>
 
                   <View style={styles.recordingActionButtons}>
                     <TouchableOpacity
@@ -393,7 +407,7 @@ export const VerificationInterviewScreen: React.FC<VerificationInterviewScreenPr
                       activeOpacity={0.8}
                     >
                       <Text style={styles.stopRecordingButtonText}>
-                        ⏹️ Finish & Send Answer Now
+                        ⏹️ बोलना समाप्त हुआ — उत्तर भेजें (Submit Answer)
                       </Text>
                     </TouchableOpacity>
 
@@ -401,7 +415,7 @@ export const VerificationInterviewScreen: React.FC<VerificationInterviewScreenPr
                       style={styles.cancelRecordingButton}
                       onPress={cancelRecording}
                     >
-                      <Text style={styles.cancelRecordingButtonText}>Cancel Mic</Text>
+                      <Text style={styles.cancelRecordingButtonText}>रद्द करें (Cancel)</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -419,12 +433,12 @@ export const VerificationInterviewScreen: React.FC<VerificationInterviewScreenPr
                   <Text style={styles.voiceIcon}>🎙️</Text>
                   <View style={styles.voiceTextContainer}>
                     <Text style={styles.voiceButtonTitle}>
-                      {isPlayingAudio ? 'Speaking question...' : 'Tap to Speak Answer'}
+                      {isPlayingAudio ? 'प्रश्न पढ़ा जा रहा है...' : 'बोलकर उत्तर दें (Tap to Speak)'}
                     </Text>
                     <Text style={styles.voiceButtonSub}>
                       {autoMicEnabled
-                        ? 'Mic starts automatically when question audio ends'
-                        : `Speaks directly in ${ticket.language === 'hi' ? 'Hindi (हिंदी)' : 'native language'}`}
+                        ? 'प्रश्न समाप्त होते ही माइक अपने-आप शुरू होगा'
+                        : 'माइक चालू करने के लिए टैप करें (बिना किसी टाइमर के)'}
                     </Text>
                   </View>
                 </TouchableOpacity>
@@ -432,7 +446,7 @@ export const VerificationInterviewScreen: React.FC<VerificationInterviewScreenPr
 
               {recordedTranscript && (
                 <View style={styles.transcriptPreview}>
-                  <Text style={styles.transcriptLabel}>Understood:</Text>
+                  <Text style={styles.transcriptLabel}>पहचाना गया (Understood):</Text>
                   <Text style={styles.transcriptContent}>"{recordedTranscript}"</Text>
                 </View>
               )}
@@ -441,7 +455,7 @@ export const VerificationInterviewScreen: React.FC<VerificationInterviewScreenPr
             {/* Divider */}
             <View style={styles.dividerRow}>
               <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>OR SELECT QUICK FIELD OPTION</Text>
+              <Text style={styles.dividerText}>या नीचे दिए गए विकल्प चुनें (OR SELECT OPTION)</Text>
               <View style={styles.dividerLine} />
             </View>
 
@@ -465,7 +479,7 @@ export const VerificationInterviewScreen: React.FC<VerificationInterviewScreenPr
             <View style={styles.customAnswerRow}>
               <TextInput
                 style={styles.customInput}
-                placeholder="Or type specific detail..."
+                placeholder="विवरण टाइप करें (Or type details)..."
                 placeholderTextColor="#64748b"
                 value={customAnswer}
                 onChangeText={setCustomAnswer}
@@ -481,7 +495,7 @@ export const VerificationInterviewScreen: React.FC<VerificationInterviewScreenPr
                   }
                 }}
               >
-                <Text style={styles.customSendText}>Send</Text>
+                <Text style={styles.customSendText}>भेजें (Send)</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -659,47 +673,37 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   recordingGuideText: {
-    color: '#f87171',
-    fontSize: 14,
+    color: '#ffffff',
+    fontSize: 15,
     fontWeight: '700',
-    marginBottom: 8,
+    marginBottom: 4,
   },
-  countdownPill: {
-    backgroundColor: 'rgba(239, 68, 68, 0.2)',
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#ef4444',
-    marginBottom: 14,
-  },
-  countdownPillText: {
-    color: '#fca5a5',
-    fontSize: 13,
-    fontWeight: '700',
+  elapsedBadge: {
+    color: '#38bdf8',
+    fontSize: 12,
+    fontWeight: '600',
+    marginBottom: 12,
   },
   recordingActionButtons: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: 'column',
     width: '100%',
   },
   stopRecordingButton: {
-    flex: 1,
-    backgroundColor: '#ef4444',
-    paddingVertical: 12,
-    borderRadius: 10,
+    backgroundColor: '#059669',
+    paddingVertical: 14,
+    borderRadius: 12,
     alignItems: 'center',
-    marginRight: 8,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#10b981',
   },
   stopRecordingButtonText: {
     color: '#ffffff',
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '800',
   },
   cancelRecordingButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 14,
+    paddingVertical: 10,
     backgroundColor: '#1e293b',
     borderRadius: 10,
     alignItems: 'center',
