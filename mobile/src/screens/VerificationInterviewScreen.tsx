@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -31,6 +31,8 @@ interface VerificationInterviewScreenProps {
   onInterviewComplete: (finalTicket: Ticket) => void;
 }
 
+const DEFAULT_SPEAKING_DURATION_SEC = 6;
+
 export const VerificationInterviewScreen: React.FC<VerificationInterviewScreenProps> = ({
   ticket,
   onInterviewComplete,
@@ -42,14 +44,41 @@ export const VerificationInterviewScreen: React.FC<VerificationInterviewScreenPr
   const [audioSourceUri, setAudioSourceUri] = useState<string | null>(null);
   const [isPlayingAudio, setIsPlayingAudio] = useState<boolean>(false);
 
+  // Auto-mic hands-free mode (default ON)
+  const [autoMicEnabled, setAutoMicEnabled] = useState<boolean>(true);
+  const autoMicRef = useRef<boolean>(true);
+  autoMicRef.current = autoMicEnabled;
+
   // Voice recording state
   const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const [isRecording, setIsRecording] = useState<boolean>(false);
   const [isTranscribing, setIsTranscribing] = useState<boolean>(false);
+  const [countdown, setCountdown] = useState<number>(DEFAULT_SPEAKING_DURATION_SEC);
   const [recordedTranscript, setRecordedTranscript] = useState<string | null>(null);
+
+  // Synchronization refs to avoid stale closures in timeouts & intervals
+  const isRecordingRef = useRef<boolean>(false);
+  const isSubmittingRef = useRef<boolean>(false);
+  const countdownTimerRef = useRef<any>(null);
+  const autoStartTimerRef = useRef<any>(null);
+
+  isRecordingRef.current = isRecording;
+  isSubmittingRef.current = isSubmitting;
+
+  const clearAllTimers = () => {
+    if (countdownTimerRef.current) {
+      clearInterval(countdownTimerRef.current);
+      countdownTimerRef.current = null;
+    }
+    if (autoStartTimerRef.current) {
+      clearTimeout(autoStartTimerRef.current);
+      autoStartTimerRef.current = null;
+    }
+  };
 
   // Fetch next question from adaptive verification engine
   const fetchNextQ = async () => {
+    clearAllTimers();
     try {
       setIsLoading(true);
       const data = await getNextQuestion(ticket.id, ticket.language);
@@ -65,8 +94,17 @@ export const VerificationInterviewScreen: React.FC<VerificationInterviewScreenPr
           ? data.question_audio_path
           : `${base}${data.question_audio_path}`;
         setAudioSourceUri(fullUrl);
-        // Auto-play audio aloud through phone speaker as soon as question loads
+        // Play question aloud; when finished, automatically trigger voice input
         playAudio(fullUrl);
+      } else {
+        // If no audio file available, auto-start mic after short pause
+        if (autoMicRef.current) {
+          autoStartTimerRef.current = setTimeout(() => {
+            if (!isSubmittingRef.current) {
+              startVoiceRecording();
+            }
+          }, 1200);
+        }
       }
     } catch (err: any) {
       setIsLoading(false);
@@ -77,6 +115,7 @@ export const VerificationInterviewScreen: React.FC<VerificationInterviewScreenPr
   useEffect(() => {
     fetchNextQ();
     return () => {
+      clearAllTimers();
       soundPlayer.stop();
     };
   }, []);
@@ -84,15 +123,28 @@ export const VerificationInterviewScreen: React.FC<VerificationInterviewScreenPr
   const playAudio = async (targetUri?: string) => {
     const uriToPlay = targetUri || audioSourceUri;
     if (!uriToPlay) return;
+    clearAllTimers();
+
     await soundPlayer.playUrl(uriToPlay, (playing) => {
       setIsPlayingAudio(playing);
+      // When audio finishes speaking, automatically trigger the microphone
+      if (!playing && autoMicRef.current && !isSubmittingRef.current) {
+        autoStartTimerRef.current = setTimeout(() => {
+          if (!isSubmittingRef.current && !isRecordingRef.current) {
+            startVoiceRecording();
+          }
+        }, 500);
+      }
     });
   };
 
-  // Start recording user's voice answer
+  // Start recording user's voice answer with automatic countdown
   const startVoiceRecording = async () => {
+    if (isRecordingRef.current || isSubmittingRef.current) return;
+    clearAllTimers();
+
     try {
-      // 1. Stop audio playback first
+      // 1. Stop any playing audio
       await soundPlayer.stop();
       setIsPlayingAudio(false);
 
@@ -114,18 +166,38 @@ export const VerificationInterviewScreen: React.FC<VerificationInterviewScreenPr
 
       await audioRecorder.prepareToRecordAsync();
       audioRecorder.record();
+
       setIsRecording(true);
+      isRecordingRef.current = true;
       setRecordedTranscript(null);
+      setCountdown(DEFAULT_SPEAKING_DURATION_SEC);
+
+      // 4. Start automatic countdown: submit automatically when time expires
+      let timeLeft = DEFAULT_SPEAKING_DURATION_SEC;
+      countdownTimerRef.current = setInterval(() => {
+        timeLeft -= 1;
+        setCountdown(timeLeft);
+        if (timeLeft <= 0) {
+          clearAllTimers();
+          stopVoiceRecordingAndSubmit();
+        }
+      }, 1000);
     } catch (err: any) {
       Alert.alert('Microphone Error', err.message || 'Could not activate microphone.');
       setIsRecording(false);
+      isRecordingRef.current = false;
+      clearAllTimers();
     }
   };
 
   // Stop recording, transcribe speech with Whisper, and submit answer
   const stopVoiceRecordingAndSubmit = async () => {
+    clearAllTimers();
+    if (!isRecordingRef.current && !isRecording) return;
+
     try {
       setIsRecording(false);
+      isRecordingRef.current = false;
       setIsTranscribing(true);
 
       await audioRecorder.stop();
@@ -133,7 +205,7 @@ export const VerificationInterviewScreen: React.FC<VerificationInterviewScreenPr
 
       if (!uri) {
         setIsTranscribing(false);
-        throw new Error('No recorded voice audio found.');
+        return;
       }
 
       // Transcribe via Whisper Small model on backend
@@ -144,8 +216,8 @@ export const VerificationInterviewScreen: React.FC<VerificationInterviewScreenPr
       if (!text) {
         setIsTranscribing(false);
         Alert.alert(
-          'No Speech Detected',
-          'Could not clearly hear your answer. Please tap Speak again and speak near the phone microphone, or tap an option below.'
+          'No Speech Heard',
+          'Could not detect speech. Please tap the mic button to speak again, or tap one of the options below.'
         );
         return;
       }
@@ -161,22 +233,45 @@ export const VerificationInterviewScreen: React.FC<VerificationInterviewScreenPr
     }
   };
 
+  // Cancel current voice recording without submitting
+  const cancelRecording = async () => {
+    clearAllTimers();
+    try {
+      if (isRecordingRef.current) {
+        await audioRecorder.stop();
+      }
+    } catch {}
+    setIsRecording(false);
+    isRecordingRef.current = false;
+  };
+
   // Submit answer (from voice, chip click, or text input)
   const handleSelectOption = async (optionText: string, optionTextEn?: string) => {
-    if (isSubmitting || !currentQuestion?.question) return;
-    // Stop playing audio immediately on user answer
+    if (isSubmittingRef.current || !currentQuestion?.question) return;
+
+    clearAllTimers();
+    if (isRecordingRef.current) {
+      try { await audioRecorder.stop(); } catch {}
+      setIsRecording(false);
+      isRecordingRef.current = false;
+    }
+
     await soundPlayer.stop();
     setIsPlayingAudio(false);
 
     try {
       setIsSubmitting(true);
+      isSubmittingRef.current = true;
+
       const updatedTicket = await submitVerificationAnswer(
         ticket.id,
         optionText,
         currentQuestion.question,
         optionTextEn
       );
+
       setIsSubmitting(false);
+      isSubmittingRef.current = false;
 
       // Check if all turns are done
       if (
@@ -190,6 +285,7 @@ export const VerificationInterviewScreen: React.FC<VerificationInterviewScreenPr
       }
     } catch (err: any) {
       setIsSubmitting(false);
+      isSubmittingRef.current = false;
       Alert.alert('Error', err.message || 'Failed to submit answer.');
     }
   };
@@ -199,11 +295,22 @@ export const VerificationInterviewScreen: React.FC<VerificationInterviewScreenPr
       <StepIndicator currentStep={3} />
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* SOP Grounding Banner */}
-        <View style={styles.sopBadge}>
-          <Text style={styles.sopBadgeText}>
-            📖 SOP: {currentQuestion?.sop_source || 'BSL Plant Safety Standard'}
-          </Text>
+        {/* Top Header Row with SOP badge and Hands-free toggle */}
+        <View style={styles.topMetaRow}>
+          <View style={styles.sopBadge}>
+            <Text style={styles.sopBadgeText}>
+              📖 SOP: {currentQuestion?.sop_source || 'BSL Plant Safety Standard'}
+            </Text>
+          </View>
+
+          <TouchableOpacity
+            style={[styles.autoMicPill, autoMicEnabled && styles.autoMicPillActive]}
+            onPress={() => setAutoMicEnabled(!autoMicEnabled)}
+          >
+            <Text style={styles.autoMicPillText}>
+              {autoMicEnabled ? '⚡ Auto-Mic: ON' : '⚡ Auto-Mic: OFF'}
+            </Text>
+          </TouchableOpacity>
         </View>
 
         {/* Turn indicator */}
@@ -219,7 +326,7 @@ export const VerificationInterviewScreen: React.FC<VerificationInterviewScreenPr
           </View>
         ) : (
           <View>
-            {/* Question Box */}
+            {/* Question Card */}
             <View style={styles.questionCard}>
               <Text style={styles.questionText}>{currentQuestion?.question}</Text>
               {audioSourceUri && (
@@ -228,52 +335,96 @@ export const VerificationInterviewScreen: React.FC<VerificationInterviewScreenPr
                   onPress={() => playAudio(audioSourceUri)}
                 >
                   <Text style={styles.listenButtonText}>
-                    {isPlayingAudio ? '🔊 Playing Question Audio...' : '🔈 Replay Question Audio'}
+                    {isPlayingAudio ? '🔊 Speaking Question Aloud...' : '🔈 Replay Question Audio'}
                   </Text>
                 </TouchableOpacity>
               )}
             </View>
 
-            {/* Voice Input Section */}
-            <View style={styles.voiceSection}>
-              <Text style={styles.voiceSectionTitle}>
-                {isRecording
-                  ? '🔴 Listening to your voice... Speak now'
-                  : isTranscribing
-                  ? '⏳ Transcribing your answer...'
-                  : '🎙️ Speak Your Answer in Native Language:'}
-              </Text>
+            {/* Hands-free Automatic Voice Section */}
+            <View
+              style={[
+                styles.voiceSection,
+                isRecording && styles.voiceSectionActive,
+                isPlayingAudio && styles.voiceSectionWaiting,
+              ]}
+            >
+              <View style={styles.voiceHeaderRow}>
+                <Text style={styles.voiceSectionTitle}>
+                  {isRecording
+                    ? `🔴 LIVE MIC — LISTENING (${countdown}s)`
+                    : isTranscribing
+                    ? '⏳ TRANSCRIBING ANSWER...'
+                    : isPlayingAudio
+                    ? '🔊 LISTENING AFTER QUESTION SPEAKS'
+                    : '🎙️ HANDS-FREE VOICE ANSWER'}
+                </Text>
+                {isRecording && (
+                  <View style={styles.livePulseBadge}>
+                    <Text style={styles.livePulseText}>REC</Text>
+                  </View>
+                )}
+              </View>
 
               {isTranscribing ? (
                 <View style={styles.transcribingBox}>
                   <ActivityIndicator size="small" color="#38bdf8" />
-                  <Text style={styles.transcribingText}>Processing speech with Whisper AI...</Text>
+                  <Text style={styles.transcribingText}>
+                    Transcribing with Whisper Neural Model...
+                  </Text>
+                </View>
+              ) : isRecording ? (
+                <View style={styles.recordingActiveContainer}>
+                  <Text style={styles.recordingGuideText}>
+                    Speak clearly in {ticket.language === 'hi' ? 'Hindi (हिंदी)' : 'your language'}...
+                  </Text>
+
+                  {/* Progress / countdown pill */}
+                  <View style={styles.countdownPill}>
+                    <Text style={styles.countdownPillText}>
+                      Auto-sending in {countdown} seconds
+                    </Text>
+                  </View>
+
+                  <View style={styles.recordingActionButtons}>
+                    <TouchableOpacity
+                      style={styles.stopRecordingButton}
+                      onPress={stopVoiceRecordingAndSubmit}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={styles.stopRecordingButtonText}>
+                        ⏹️ Finish & Send Answer Now
+                      </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={styles.cancelRecordingButton}
+                      onPress={cancelRecording}
+                    >
+                      <Text style={styles.cancelRecordingButtonText}>Cancel Mic</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               ) : (
                 <TouchableOpacity
                   style={[
                     styles.voiceButton,
-                    isRecording && styles.voiceButtonRecording,
+                    isPlayingAudio && styles.voiceButtonDisabled,
                     isSubmitting && styles.voiceButtonDisabled,
                   ]}
-                  onPress={isRecording ? stopVoiceRecordingAndSubmit : startVoiceRecording}
+                  onPress={startVoiceRecording}
                   disabled={isSubmitting || isLoading}
                   activeOpacity={0.8}
                 >
-                  <Text style={styles.voiceIcon}>{isRecording ? '⏹️' : '🎙️'}</Text>
+                  <Text style={styles.voiceIcon}>🎙️</Text>
                   <View style={styles.voiceTextContainer}>
-                    <Text
-                      style={[
-                        styles.voiceButtonTitle,
-                        isRecording && styles.voiceButtonTitleRecording,
-                      ]}
-                    >
-                      {isRecording ? 'Tap to Submit Voice Answer' : 'Tap to Speak Your Answer'}
+                    <Text style={styles.voiceButtonTitle}>
+                      {isPlayingAudio ? 'Speaking question...' : 'Tap to Speak Answer'}
                     </Text>
                     <Text style={styles.voiceButtonSub}>
-                      {isRecording
-                        ? 'Done speaking? Tap here to transcribe & verify'
-                        : `Speaks directly in ${ticket.language === 'hi' ? 'Hindi (हिंदी)' : 'your language'}`}
+                      {autoMicEnabled
+                        ? 'Mic starts automatically when question audio ends'
+                        : `Speaks directly in ${ticket.language === 'hi' ? 'Hindi (हिंदी)' : 'native language'}`}
                     </Text>
                   </View>
                 </TouchableOpacity>
@@ -300,7 +451,7 @@ export const VerificationInterviewScreen: React.FC<VerificationInterviewScreenPr
                 key={idx}
                 style={styles.optionCard}
                 onPress={() => handleSelectOption(opt)}
-                disabled={isSubmitting || isRecording}
+                disabled={isSubmitting}
                 activeOpacity={0.7}
               >
                 <View style={styles.optionIndex}>
@@ -318,11 +469,11 @@ export const VerificationInterviewScreen: React.FC<VerificationInterviewScreenPr
                 placeholderTextColor="#64748b"
                 value={customAnswer}
                 onChangeText={setCustomAnswer}
-                editable={!isRecording && !isSubmitting}
+                editable={!isSubmitting}
               />
               <TouchableOpacity
                 style={styles.customSendButton}
-                disabled={isRecording || isSubmitting}
+                disabled={isSubmitting}
                 onPress={() => {
                   if (customAnswer.trim()) {
                     handleSelectOption(customAnswer.trim());
@@ -349,19 +500,42 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingBottom: 40,
   },
+  topMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
   sopBadge: {
     backgroundColor: 'rgba(56, 189, 248, 0.15)',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 8,
-    alignSelf: 'flex-start',
     borderWidth: 1,
     borderColor: 'rgba(56, 189, 248, 0.3)',
-    marginBottom: 8,
+    flex: 1,
+    marginRight: 8,
   },
   sopBadgeText: {
     color: '#38bdf8',
     fontSize: 11,
+    fontWeight: '700',
+  },
+  autoMicPill: {
+    backgroundColor: '#0f172a',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  autoMicPillActive: {
+    backgroundColor: 'rgba(5, 150, 105, 0.2)',
+    borderColor: '#059669',
+  },
+  autoMicPillText: {
+    color: '#34d399',
+    fontSize: 10,
     fontWeight: '700',
   },
   turnLabel: {
@@ -386,7 +560,7 @@ const styles = StyleSheet.create({
     padding: 18,
     borderWidth: 1,
     borderColor: '#1e293b',
-    marginBottom: 18,
+    marginBottom: 16,
   },
   questionText: {
     color: '#ffffff',
@@ -421,13 +595,35 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(56, 189, 248, 0.3)',
     marginBottom: 18,
   },
+  voiceSectionActive: {
+    backgroundColor: 'rgba(239, 68, 68, 0.08)',
+    borderColor: '#ef4444',
+  },
+  voiceSectionWaiting: {
+    borderColor: 'rgba(56, 189, 248, 0.5)',
+  },
+  voiceHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
   voiceSectionTitle: {
     color: '#38bdf8',
-    fontSize: 12,
-    fontWeight: '700',
-    textTransform: 'uppercase',
+    fontSize: 11,
+    fontWeight: '800',
     letterSpacing: 0.5,
-    marginBottom: 10,
+  },
+  livePulseBadge: {
+    backgroundColor: '#ef4444',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  livePulseText: {
+    color: '#ffffff',
+    fontSize: 9,
+    fontWeight: '900',
   },
   voiceButton: {
     flexDirection: 'row',
@@ -437,10 +633,6 @@ const styles = StyleSheet.create({
     padding: 14,
     borderWidth: 1.5,
     borderColor: '#38bdf8',
-  },
-  voiceButtonRecording: {
-    backgroundColor: 'rgba(239, 68, 68, 0.15)',
-    borderColor: '#ef4444',
   },
   voiceButtonDisabled: {
     opacity: 0.5,
@@ -458,12 +650,64 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     marginBottom: 2,
   },
-  voiceButtonTitleRecording: {
-    color: '#f87171',
-  },
   voiceButtonSub: {
     color: '#94a3b8',
     fontSize: 11,
+  },
+  recordingActiveContainer: {
+    alignItems: 'center',
+    paddingVertical: 6,
+  },
+  recordingGuideText: {
+    color: '#f87171',
+    fontSize: 14,
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+  countdownPill: {
+    backgroundColor: 'rgba(239, 68, 68, 0.2)',
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#ef4444',
+    marginBottom: 14,
+  },
+  countdownPillText: {
+    color: '#fca5a5',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  recordingActionButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
+  stopRecordingButton: {
+    flex: 1,
+    backgroundColor: '#ef4444',
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  stopRecordingButtonText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  cancelRecordingButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    backgroundColor: '#1e293b',
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  cancelRecordingButtonText: {
+    color: '#94a3b8',
+    fontSize: 12,
+    fontWeight: '600',
   },
   transcribingBox: {
     flexDirection: 'row',
