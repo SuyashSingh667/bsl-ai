@@ -53,6 +53,8 @@ export const VerificationInterviewScreen: React.FC<VerificationInterviewScreenPr
           ? data.question_audio_path
           : `${base}${data.question_audio_path}`;
         setAudioSourceUri(fullUrl);
+        // Auto-play audio aloud as soon as question loads
+        playAudio(fullUrl);
       }
     } catch (err: any) {
       setIsLoading(false);
@@ -64,13 +66,18 @@ export const VerificationInterviewScreen: React.FC<VerificationInterviewScreenPr
     fetchNextQ();
     return () => {
       if (playerRef.current) {
-        try { playerRef.current.remove(); } catch {}
+        try {
+          playerRef.current.pause();
+          playerRef.current.remove();
+        } catch {}
+        playerRef.current = null;
       }
     };
   }, []);
 
-  const playAudio = async () => {
-    if (!audioSourceUri) return;
+  const playAudio = async (targetUri?: string) => {
+    const uriToPlay = targetUri || audioSourceUri;
+    if (!uriToPlay) return;
     try {
       setIsPlayingAudio(true);
       // Ensure speaker playback on iOS/Android
@@ -80,10 +87,14 @@ export const VerificationInterviewScreen: React.FC<VerificationInterviewScreenPr
       });
 
       if (playerRef.current) {
-        try { playerRef.current.remove(); } catch {}
+        try {
+          playerRef.current.pause();
+          playerRef.current.remove();
+        } catch {}
+        playerRef.current = null;
       }
 
-      const p = createAudioPlayer({ uri: audioSourceUri });
+      const p = createAudioPlayer({ uri: uriToPlay }, { downloadFirst: true });
       playerRef.current = p;
       p.play();
 
@@ -94,13 +105,23 @@ export const VerificationInterviewScreen: React.FC<VerificationInterviewScreenPr
       });
     } catch (err: any) {
       setIsPlayingAudio(false);
-      Alert.alert('Audio Playback', 'Could not play question audio: ' + (err.message || err));
+      console.warn('Question audio playback error:', err);
     }
   };
 
   // Submit selected option chip
   const handleSelectOption = async (optionText: string) => {
     if (isSubmitting || !currentQuestion?.question) return;
+    // Stop any playing audio on answer submit
+    if (playerRef.current) {
+      try {
+        playerRef.current.pause();
+        playerRef.current.remove();
+      } catch {}
+      playerRef.current = null;
+    }
+    setIsPlayingAudio(false);
+
     try {
       setIsSubmitting(true);
       const updatedTicket = await submitVerificationAnswer(
@@ -154,8 +175,13 @@ export const VerificationInterviewScreen: React.FC<VerificationInterviewScreenPr
             <View style={styles.questionCard}>
               <Text style={styles.questionText}>{currentQuestion?.question}</Text>
               {audioSourceUri && (
-                <TouchableOpacity style={styles.listenButton} onPress={playAudio}>
-                  <Text style={styles.listenButtonText}>🔈 Listen to Question</Text>
+                <TouchableOpacity
+                  style={[styles.listenButton, isPlayingAudio && styles.listenButtonPlaying]}
+                  onPress={() => playAudio(audioSourceUri)}
+                >
+                  <Text style={styles.listenButtonText}>
+                    {isPlayingAudio ? '🔊 Playing Question Audio...' : '🔈 Replay Question Audio'}
+                  </Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -266,6 +292,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 8,
     alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  listenButtonPlaying: {
+    backgroundColor: 'rgba(56, 189, 248, 0.2)',
+    borderColor: '#38bdf8',
   },
   listenButtonText: {
     color: '#38bdf8',
