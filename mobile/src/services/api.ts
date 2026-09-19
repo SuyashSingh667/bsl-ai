@@ -123,10 +123,33 @@ export async function getNextQuestion(ticketId: string, lang?: string): Promise<
   return res.json();
 }
 
+export async function transcribeAudioFile(
+  audioUri: string,
+  language?: string
+): Promise<{ transcript: string; transcript_en: string; language: string }> {
+  const base = await getApiBaseUrl();
+  const parameters: Record<string, string> = {};
+  if (language) parameters.language = language;
+
+  const response = await FileSystem.uploadAsync(`${base}/transcription`, audioUri, {
+    httpMethod: 'POST',
+    uploadType: FileSystem.FileSystemUploadType.MULTIPART,
+    fieldName: 'file',
+    mimeType: 'audio/m4a',
+    parameters,
+  });
+
+  if (response.status < 200 || response.status >= 300) {
+    throw new Error(`Voice transcription failed (${response.status}): ${response.body}`);
+  }
+  return JSON.parse(response.body);
+}
+
 export async function submitVerificationAnswer(
   ticketId: string,
   answerText: string,
-  questionText?: string
+  questionText?: string,
+  answerTextEn?: string
 ): Promise<Ticket> {
   const base = await getApiBaseUrl();
   const res = await fetch(`${base}/verification/${ticketId}/answer`, {
@@ -135,6 +158,7 @@ export async function submitVerificationAnswer(
     body: JSON.stringify({
       answer_text: answerText,
       question_text: questionText,
+      answer_text_en: answerTextEn,
     }),
   });
   if (!res.ok) {
