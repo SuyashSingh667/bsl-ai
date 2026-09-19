@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -18,7 +19,7 @@ import {
 import { INTAKE_LANGUAGES } from '../services/config';
 import { createIncidentFromAudio, createIncidentFromText, Ticket } from '../services/api';
 import { StepIndicator } from '../components/StepIndicator';
-import { ZoneRestrictionBanner, RESTRICTED_ZONES_MAP } from '../components/ZoneRestrictionBanner';
+import { RESTRICTED_ZONES_MAP } from '../components/ZoneRestrictionBanner';
 import { KioskSession } from './KioskLoginScreen';
 import { i18n } from '../services/i18n';
 import { outbox } from '../services/outbox';
@@ -325,12 +326,6 @@ export const IncidentRecorderScreen: React.FC<IncidentRecorderScreenProps> = ({
           Voice-first reporting with automated steel plant domain transcription and noise suppression.
         </Text>
 
-        {/* Zone Restriction Banner */}
-        <ZoneRestrictionBanner
-          zoneId={selectedZone}
-          onUseKiosk={onSwitchToKiosk}
-        />
-
         {/* Zone Selection Chips */}
         <Text style={styles.sectionLabel}>OBSERVED PLANT ZONE:</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.zoneScroll}>
@@ -401,23 +396,30 @@ export const IncidentRecorderScreen: React.FC<IncidentRecorderScreenProps> = ({
         {/* Voice Mode (PPE / Glove Friendly Giant Trigger) */}
         {mode === 'voice' && (
           <View style={styles.voiceSection}>
-            <TouchableOpacity
-              style={[
-                styles.micHeroButton,
-                isRecording ? styles.micHeroRecording : styles.micHeroIdle,
-              ]}
-              onPress={isRecording ? stopRecordingAndTranscribe : startRecording}
-              disabled={isLoading}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.micIcon}>{isRecording ? '■' : '●'}</Text>
-              <Text style={styles.micActionText}>
-                {isRecording ? 'Tap to Stop & Transcribe' : 'Tap to Speak'}
-              </Text>
-              <Text style={styles.micSubText}>
-                {isRecording ? 'Acoustic noise filter active...' : 'One-handed, glove-friendly trigger'}
-              </Text>
-            </TouchableOpacity>
+            <View style={[styles.micHalo, isRecording && styles.micHaloRecording]}>
+              <TouchableOpacity
+                style={[
+                  styles.micHeroButton,
+                  isRecording ? styles.micHeroRecording : styles.micHeroIdle,
+                ]}
+                onPress={isRecording ? stopRecordingAndTranscribe : startRecording}
+                disabled={isLoading}
+                activeOpacity={0.85}
+              >
+                <Image
+                  source={isRecording ? require('../../assets/stop.png') : require('../../assets/mic.png')}
+                  style={styles.micImage}
+                  resizeMode="contain"
+                />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.micActionText}>
+              {isRecording ? 'Tap to Stop & Transcribe' : 'Tap to Speak'}
+            </Text>
+            <Text style={styles.micSubText}>
+              {isRecording ? 'Acoustic noise filter active...' : 'One-handed, glove-friendly trigger'}
+            </Text>
 
             {isRecording && (
               <View style={styles.recordingPulseBar}>
@@ -646,43 +648,62 @@ const styles = StyleSheet.create({
   },
   voiceSection: {
     alignItems: 'center',
-    marginVertical: 20,
+    justifyContent: 'center',
+    marginVertical: 28,
+    paddingHorizontal: 16,
+  },
+  micHalo: {
+    width: 168,
+    height: 168,
+    borderRadius: 84,
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  micHaloRecording: {
+    backgroundColor: 'rgba(255, 69, 58, 0.08)',
+    borderColor: 'rgba(255, 69, 58, 0.25)',
   },
   micHeroButton: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+    width: 128,
+    height: 128,
+    borderRadius: 64,
     alignItems: 'center',
     justifyContent: 'center',
   },
   micHeroIdle: {
     backgroundColor: '#1c1c1e',
-    borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.25)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.18)',
   },
   micHeroRecording: {
-    backgroundColor: '#FF453A',
+    backgroundColor: '#2c2c2e',
+    borderWidth: 2,
+    borderColor: '#FF453A',
     shadowColor: '#FF453A',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.45,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
     shadowRadius: 16,
   },
-  micIcon: {
-    fontSize: 38,
-    marginBottom: 4,
+  micImage: {
+    width: 50,
+    height: 50,
   },
   micActionText: {
     color: '#ffffff',
-    fontSize: 13,
+    fontSize: 16,
     fontWeight: '700',
     textAlign: 'center',
     letterSpacing: -0.2,
   },
   micSubText: {
-    color: 'rgba(255, 255, 255, 0.65)',
-    fontSize: 10,
+    color: 'rgba(235, 235, 245, 0.65)',
+    fontSize: 12,
     textAlign: 'center',
-    marginTop: 2,
+    marginTop: 4,
   },
   recordingPulseBar: {
     flexDirection: 'row',
