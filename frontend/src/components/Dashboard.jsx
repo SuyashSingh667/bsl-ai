@@ -1,5 +1,15 @@
 import { useEffect, useState } from "react";
-import { audioUrl, getSimilarIncidents, getTickets, updateTicket, photoUrl } from "../api";
+import {
+  audioUrl,
+  getSimilarIncidents,
+  getTickets,
+  updateTicket,
+  photoUrl,
+  assignAction,
+  closeAction,
+  getSafetyTrends,
+  getCultureMetrics,
+} from "../api";
 
 const TIER_LABELS = {
   emergency_authority: "Emergency Authority",
@@ -22,7 +32,16 @@ const LANGUAGE_NAMES = {
   or: "ଓଡ଼ିଆ (Odia)",
 };
 
+const LIFECYCLE_STAGES = [
+  { key: "received", label: "Received", icon: "📥" },
+  { key: "under_review", label: "Under Review", icon: "🔍" },
+  { key: "action_assigned", label: "Action Assigned", icon: "🛠️" },
+  { key: "action_taken", label: "Action Taken", icon: "🚧" },
+  { key: "resolved", label: "Resolved", icon: "✅" },
+];
+
 export default function Dashboard() {
+  const [dashboardView, setDashboardView] = useState("queue"); // "queue" | "trends" | "culture"
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -37,6 +56,20 @@ export default function Dashboard() {
   const [editNotes, setEditNotes] = useState("");
   const [saveSuccess, setSaveSuccess] = useState(false);
 
+  // Corrective Action assignment & closure state
+  const [assignedTo, setAssignedTo] = useState("");
+  const [correctiveAction, setCorrectiveAction] = useState("");
+  const [dueDate, setDueDate] = useState("");
+  const [closureNotes, setClosureNotes] = useState("");
+  const [actionLoading, setActionLoading] = useState(false);
+  const [actionMsg, setActionMsg] = useState(null);
+
+  // Trends & Culture views state
+  const [trendsData, setTrendsData] = useState(null);
+  const [trendsLoading, setTrendsLoading] = useState(false);
+  const [cultureData, setCultureData] = useState(null);
+  const [cultureLoading, setCultureLoading] = useState(false);
+
   async function loadTickets() {
     setLoading(true);
     setError(null);
@@ -50,16 +83,50 @@ export default function Dashboard() {
     }
   }
 
+  async function loadTrends() {
+    setTrendsLoading(true);
+    try {
+      const data = await getSafetyTrends("bsl_bokaro");
+      setTrendsData(data);
+    } catch (err) {
+      console.warn("Failed to load safety trends:", err);
+    } finally {
+      setTrendsLoading(false);
+    }
+  }
+
+  async function loadCulture() {
+    setCultureLoading(true);
+    try {
+      const data = await getCultureMetrics("bsl_bokaro");
+      setCultureData(data);
+    } catch (err) {
+      console.warn("Failed to load culture metrics:", err);
+    } finally {
+      setCultureLoading(false);
+    }
+  }
+
   useEffect(() => {
     loadTickets();
   }, [filterTier, filterStatus]);
+
+  useEffect(() => {
+    if (dashboardView === "trends") loadTrends();
+    if (dashboardView === "culture") loadCulture();
+  }, [dashboardView]);
 
   async function handleSelectTicket(t) {
     setSelectedTicket(t);
     setEditStatus(t.status || "open");
     setEditTier(t.routing_tier || "safety_team_queue");
     setEditNotes(t.resolution_notes || "");
+    setAssignedTo(t.assigned_to || "");
+    setCorrectiveAction(t.corrective_action || "");
+    setDueDate(t.due_date ? t.due_date.slice(0, 10) : "");
+    setClosureNotes(t.closure_notes || "");
     setSaveSuccess(false);
+    setActionMsg(null);
     setSimilarData(null);
     try {
       const sim = await getSimilarIncidents(t.id);
@@ -82,12 +149,58 @@ export default function Dashboard() {
       });
       setSelectedTicket(updated);
       setSaveSuccess(true);
-      // update ticket in list
       setTickets((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
     } catch (err) {
       alert("Failed to save updates: " + err.message);
     } finally {
       setUpdating(false);
+    }
+  }
+
+  async function handleAssignAction(e) {
+    e.preventDefault();
+    if (!selectedTicket || !assignedTo.trim() || !correctiveAction.trim()) {
+      alert("Please provide both assignee name and corrective action description.");
+      return;
+    }
+    setActionLoading(true);
+    setActionMsg(null);
+    try {
+      const updated = await assignAction(selectedTicket.id, {
+        assignedTo: assignedTo.trim(),
+        correctiveAction: correctiveAction.trim(),
+        dueDate: dueDate ? new Date(dueDate).toISOString() : null,
+      });
+      setSelectedTicket(updated);
+      setActionMsg("Corrective action assigned successfully!");
+      setTickets((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
+    } catch (err) {
+      alert("Failed to assign action: " + err.message);
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
+  async function handleCloseAction(e) {
+    e.preventDefault();
+    if (!selectedTicket || !closureNotes.trim()) {
+      alert("Please provide verification closure notes or work order ID.");
+      return;
+    }
+    setActionLoading(true);
+    setActionMsg(null);
+    try {
+      const updated = await closeAction(selectedTicket.id, {
+        closureNotes: closureNotes.trim(),
+      });
+      setSelectedTicket(updated);
+      setEditStatus("resolved");
+      setActionMsg(`Hazard resolved and closed! SLA Turnaround: ${updated.closure_time_hours} hrs.`);
+      setTickets((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
+    } catch (err) {
+      alert("Failed to close action: " + err.message);
+    } finally {
+      setActionLoading(false);
     }
   }
 
@@ -99,7 +212,8 @@ export default function Dashboard() {
       (t.zone_id && t.zone_id.toLowerCase().includes(q)) ||
       (t.predicted_category && t.predicted_category.toLowerCase().includes(q)) ||
       (t.incident_description && t.incident_description.toLowerCase().includes(q)) ||
-      (t.incident_description_en && t.incident_description_en.toLowerCase().includes(q))
+      (t.incident_description_en && t.incident_description_en.toLowerCase().includes(q)) ||
+      (t.anonymous_tracking_code && t.anonymous_tracking_code.toLowerCase().includes(q))
     );
   });
 
@@ -117,148 +231,398 @@ export default function Dashboard() {
           <h2>Safety Intelligence Command Center</h2>
           <p className="subtitle">Real-time incident triage, spatial verification & decision support</p>
         </div>
-        <button className="refresh-btn" onClick={loadTickets} disabled={loading}>
-          🔄 {loading ? "Refreshing..." : "Refresh Queue"}
+        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+          <button className="refresh-btn" onClick={loadTickets} disabled={loading}>
+            🔄 {loading ? "Refreshing..." : "Refresh Queue"}
+          </button>
+        </div>
+      </div>
+
+      {/* View Switcher Sub-Navigation */}
+      <div style={{ display: "flex", gap: "10px", marginBottom: "1.25rem", borderBottom: "1px solid #334155", paddingBottom: "10px" }}>
+        <button
+          style={{
+            padding: "8px 16px",
+            borderRadius: "8px",
+            border: "none",
+            cursor: "pointer",
+            fontWeight: "700",
+            fontSize: "0.85rem",
+            background: dashboardView === "queue" ? "#38bdf8" : "#1e293b",
+            color: dashboardView === "queue" ? "#070d18" : "#cbd5e1",
+          }}
+          onClick={() => setDashboardView("queue")}
+        >
+          📋 Incident Triage Queue ({tickets.length})
+        </button>
+        <button
+          style={{
+            padding: "8px 16px",
+            borderRadius: "8px",
+            border: "none",
+            cursor: "pointer",
+            fontWeight: "700",
+            fontSize: "0.85rem",
+            background: dashboardView === "trends" ? "#38bdf8" : "#1e293b",
+            color: dashboardView === "trends" ? "#070d18" : "#cbd5e1",
+          }}
+          onClick={() => setDashboardView("trends")}
+        >
+          📈 Safety Trends & Hotspots
+        </button>
+        <button
+          style={{
+            padding: "8px 16px",
+            borderRadius: "8px",
+            border: "none",
+            cursor: "pointer",
+            fontWeight: "700",
+            fontSize: "0.85rem",
+            background: dashboardView === "culture" ? "#38bdf8" : "#1e293b",
+            color: dashboardView === "culture" ? "#070d18" : "#cbd5e1",
+          }}
+          onClick={() => setDashboardView("culture")}
+        >
+          🤝 Team Recognition & Culture
         </button>
       </div>
 
-      {/* Metrics Row */}
-      <div className="metrics-row">
-        <div className="metric-card">
-          <div className="metric-value">{tickets.length}</div>
-          <div className="metric-label">Total Logged</div>
-        </div>
-        <div className="metric-card emergency">
-          <div className="metric-value">{emergencyCount}</div>
-          <div className="metric-label">Emergency / Escalated</div>
-        </div>
-        <div className="metric-card high-risk">
-          <div className="metric-value">{highRiskCount}</div>
-          <div className="metric-label">High Risk (≥0.70)</div>
-        </div>
-        <div className="metric-card active">
-          <div className="metric-value">{openCount + inProgressCount}</div>
-          <div className="metric-label">Open / In Progress</div>
-        </div>
-      </div>
+      {/* VIEW 1: INCIDENT TRIAGE QUEUE */}
+      {dashboardView === "queue" && (
+        <>
+          {/* Metrics Row */}
+          <div className="metrics-row">
+            <div className="metric-card">
+              <div className="metric-value">{tickets.length}</div>
+              <div className="metric-label">Total Logged</div>
+            </div>
+            <div className="metric-card emergency">
+              <div className="metric-value">{emergencyCount}</div>
+              <div className="metric-label">Emergency / Escalated</div>
+            </div>
+            <div className="metric-card high-risk">
+              <div className="metric-value">{highRiskCount}</div>
+              <div className="metric-label">High Risk (≥0.70)</div>
+            </div>
+            <div className="metric-card active">
+              <div className="metric-value">{openCount + inProgressCount}</div>
+              <div className="metric-label">Open / In Progress</div>
+            </div>
+          </div>
 
-      {/* Filters Bar */}
-      <div className="filters-bar">
-        <div className="filter-group">
-          <label>Status:</label>
-          <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
-            <option value="all">All Statuses</option>
-            <option value="open">Open</option>
-            <option value="in_progress">In Progress</option>
-            <option value="escalated">Escalated</option>
-            <option value="resolved">Resolved</option>
-          </select>
-        </div>
+          {/* Filters Bar */}
+          <div className="filters-bar">
+            <div className="filter-group">
+              <label>Status:</label>
+              <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
+                <option value="all">All Statuses</option>
+                <option value="open">Open</option>
+                <option value="in_progress">In Progress</option>
+                <option value="escalated">Escalated</option>
+                <option value="resolved">Resolved</option>
+              </select>
+            </div>
 
-        <div className="filter-group">
-          <label>Routing Tier:</label>
-          <select value={filterTier} onChange={(e) => setFilterTier(e.target.value)}>
-            <option value="all">All Tiers</option>
-            <option value="emergency_authority">Emergency Authority</option>
-            <option value="plant_safety_officer">Plant Safety Officer</option>
-            <option value="shift_supervisor">Shift Supervisor</option>
-            <option value="safety_team_queue">Safety Team Queue</option>
-          </select>
-        </div>
+            <div className="filter-group">
+              <label>Routing Tier:</label>
+              <select value={filterTier} onChange={(e) => setFilterTier(e.target.value)}>
+                <option value="all">All Tiers</option>
+                <option value="emergency_authority">Emergency Authority</option>
+                <option value="plant_safety_officer">Plant Safety Officer</option>
+                <option value="shift_supervisor">Shift Supervisor</option>
+                <option value="safety_team_queue">Safety Team Queue</option>
+              </select>
+            </div>
 
-        <div className="filter-group search-group">
-          <input
-            type="text"
-            placeholder="Search ID, Zone, Category, Text..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
-      </div>
+            <div className="filter-group search-group">
+              <input
+                type="text"
+                placeholder="Search ID, Zone, Category, Text, Tracking Code..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+          </div>
 
-      {error && <p className="error-text">{error}</p>}
+          {error && <p className="error-text">{error}</p>}
 
-      {/* Tickets Table */}
-      <div className="table-container">
-        <table className="tickets-table">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Time</th>
-              <th>Type</th>
-              <th>Category</th>
-              <th>Zone</th>
-              <th>Risk Score</th>
-              <th>Routing Tier</th>
-              <th>Status</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredTickets.length === 0 ? (
-              <tr>
-                <td colSpan="9" style={{ textAlign: "center", padding: "2rem", color: "#888" }}>
-                  {loading ? "Loading incidents..." : "No incidents found matching current filters."}
-                </td>
-              </tr>
-            ) : (
-              filteredTickets.map((t) => {
-                const isEmerg = t.report_type === "emergency" || t.routing_tier === "emergency_authority";
-                const risk = t.risk_score != null ? t.risk_score : 0;
-                let riskClass = "risk-low";
-                if (risk >= 0.7) riskClass = "risk-high";
-                else if (risk >= 0.4) riskClass = "risk-med";
-
-                return (
-                  <tr key={t.id} className={isEmerg ? "row-emergency" : ""}>
-                    <td className="ticket-id-cell">{t.id}</td>
-                    <td className="date-cell">
-                      {new Date(t.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                    </td>
-                    <td>
-                      <span className={`pill ${t.report_type === "emergency" ? "pill-emergency" : "pill-suspected"}`}>
-                        {t.report_type}
-                      </span>
-                    </td>
-                    <td>
-                      <div>
-                        <strong>{(t.predicted_category || "Unclassified").replaceAll("_", " ")}</strong>
-                        {Boolean(t.photo_url || t.photo_proof_path) && (() => {
-                          const src = t.photo_url || t.photo_proof_path || "";
-                          const isVid = t.media_type === "video" || /\.(mp4|webm|mov|mkv|avi)(\?.*)?$/i.test(src);
-                          return (
-                            <span className="table-photo-badge" title={isVid ? "Video field evidence attached" : "Photographic evidence attached"}>
-                              {isVid ? "🎥" : "📷"}
-                            </span>
-                          );
-                        })()}
-                        {t.flagged_for_human_review && (
-                          <span className="table-review-flag" title={t.review_reason || "Flagged for safety officer inspection"}>
-                            🔍 Review
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td>{t.zone_id || "—"}</td>
-                    <td>
-                      <span className={`risk-pill ${riskClass}`}>{t.risk_score != null ? t.risk_score : "—"}</span>
-                    </td>
-                    <td className="tier-cell">{TIER_LABELS[t.routing_tier] || t.routing_tier || "—"}</td>
-                    <td>
-                      <span className={`status-pill status-${t.status}`}>{t.status}</span>
-                    </td>
-                    <td>
-                      <button className="inspect-btn" onClick={() => handleSelectTicket(t)}>
-                        Inspect
-                      </button>
+          {/* Tickets Table */}
+          <div className="tickets-table-container">
+            <table className="tickets-table">
+              <thead>
+                <tr>
+                  <th>Ticket ID</th>
+                  <th>Logged</th>
+                  <th>Type / Mode</th>
+                  <th>Category</th>
+                  <th>Zone / Shift</th>
+                  <th>Risk Score</th>
+                  <th>Routing Tier</th>
+                  <th>Stage / Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredTickets.length === 0 ? (
+                  <tr>
+                    <td colSpan="9" style={{ textAlign: "center", padding: "2rem", color: "#888" }}>
+                      {loading ? "Loading incidents..." : "No incidents found matching current filters."}
                     </td>
                   </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
+                ) : (
+                  filteredTickets.map((t) => {
+                    const isEmerg = t.report_type === "emergency" || t.routing_tier === "emergency_authority";
+                    const risk = t.risk_score != null ? t.risk_score : 0;
+                    let riskClass = "risk-low";
+                    if (risk >= 0.7) riskClass = "risk-high";
+                    else if (risk >= 0.4) riskClass = "risk-med";
+
+                    return (
+                      <tr key={t.id} className={isEmerg ? "row-emergency" : ""}>
+                        <td className="ticket-id-cell">
+                          {t.id}
+                          {t.anonymous_tracking_code && (
+                            <div style={{ fontSize: "0.72rem", color: "#a78bfa", fontWeight: "700" }}>
+                              {t.anonymous_tracking_code}
+                            </div>
+                          )}
+                        </td>
+                        <td className="date-cell">
+                          {new Date(t.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                        </td>
+                        <td>
+                          <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                            <span className={`pill ${t.report_type === "emergency" ? "pill-emergency" : "pill-suspected"}`}>
+                              {t.report_type}
+                            </span>
+                            {t.is_anonymous && (
+                              <span style={{ fontSize: "0.68rem", color: "#c084fc", fontWeight: "700" }}>
+                                🔒 Anonymous
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td>
+                          <div>
+                            <strong>{(t.predicted_category || "Unclassified").replaceAll("_", " ")}</strong>
+                            {Boolean(t.photo_url || t.photo_proof_path) && (() => {
+                              const src = t.photo_url || t.photo_proof_path || "";
+                              const isVid = t.media_type === "video" || /\.(mp4|webm|mov|mkv|avi)(\?.*)?$/i.test(src);
+                              return (
+                                <span className="table-photo-badge" title={isVid ? "Video field evidence attached" : "Photographic evidence attached"}>
+                                  {isVid ? "🎥" : "📷"}
+                                </span>
+                              );
+                            })()}
+                            {t.flagged_for_human_review && (
+                              <span className="table-review-flag" title={t.review_reason || "Flagged for safety officer inspection"}>
+                                🔍 Review
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td>
+                          <div>{t.zone_id || "—"}</div>
+                          {t.shift && <div style={{ fontSize: "0.72rem", color: "#94a3b8" }}>{t.shift}</div>}
+                        </td>
+                        <td>
+                          <span className={`risk-pill ${riskClass}`}>{t.risk_score != null ? t.risk_score : "—"}</span>
+                        </td>
+                        <td className="tier-cell">{TIER_LABELS[t.routing_tier] || t.routing_tier || "—"}</td>
+                        <td>
+                          <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
+                            <span className={`status-pill status-${t.status}`}>{t.status}</span>
+                            {t.lifecycle_stage && (
+                              <span style={{ fontSize: "0.7rem", color: "#38bdf8", fontWeight: "600" }}>
+                                {t.lifecycle_stage.replace(/_/g, " ")}
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td>
+                          <button className="inspect-btn" onClick={() => handleSelectTicket(t)}>
+                            Inspect
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+
+      {/* VIEW 2: SAFETY TRENDS & HOTSPOTS */}
+      {dashboardView === "trends" && (
+        <div style={{ color: "#f8fafc" }}>
+          {trendsLoading ? (
+            <p style={{ textAlign: "center", padding: "2rem", color: "#94a3b8" }}>Loading trend analytics...</p>
+          ) : trendsData ? (
+            <div>
+              {/* Trends KPI cards */}
+              <div className="metrics-row" style={{ marginBottom: "1.5rem" }}>
+                <div className="metric-card">
+                  <div className="metric-value">{trendsData.total_incidents}</div>
+                  <div className="metric-label">Total Reports</div>
+                </div>
+                <div className="metric-card">
+                  <div className="metric-value" style={{ color: "#38bdf8" }}>{trendsData.total_near_misses}</div>
+                  <div className="metric-label">Near-Misses Logged</div>
+                </div>
+                <div className="metric-card">
+                  <div className="metric-value" style={{ color: "#34d399" }}>{trendsData.closed_near_misses}</div>
+                  <div className="metric-label">Hazards Closed</div>
+                </div>
+                <div className="metric-card">
+                  <div className="metric-value" style={{ color: "#fbbf24" }}>{trendsData.avg_closure_time_hours}h</div>
+                  <div className="metric-label">Avg Turnaround SLA</div>
+                </div>
+              </div>
+
+              {/* Grid: Zone Hotspots & Shift Breakdown */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", marginBottom: "1.5rem" }}>
+                <div style={{ background: "#0c1524", border: "1px solid #1e293b", borderRadius: "10px", padding: "1rem" }}>
+                  <h3 style={{ fontSize: "1rem", color: "#38bdf8", marginBottom: "0.75rem" }}>📍 Repeat Hazard Hotspots by Zone</h3>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                    {Object.entries(trendsData.hazards_by_zone || {}).map(([zone, count]) => (
+                      <div key={zone} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "#0f1d32", padding: "8px 12px", borderRadius: "6px" }}>
+                        <span style={{ fontWeight: "700", color: "#e2e8f0" }}>{zone}</span>
+                        <span style={{ background: "rgba(56, 189, 248, 0.2)", color: "#38bdf8", padding: "2px 8px", borderRadius: "4px", fontWeight: "800", fontSize: "0.8rem" }}>
+                          {count} incidents
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div style={{ background: "#0c1524", border: "1px solid #1e293b", borderRadius: "10px", padding: "1rem" }}>
+                  <h3 style={{ fontSize: "1rem", color: "#38bdf8", marginBottom: "0.75rem" }}>🕒 Incidents by Operational Shift</h3>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                    {Object.entries(trendsData.hazards_by_shift || {}).map(([shift, count]) => (
+                      <div key={shift} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "#0f1d32", padding: "8px 12px", borderRadius: "6px" }}>
+                        <span style={{ fontWeight: "700", color: "#e2e8f0" }}>{shift}</span>
+                        <span style={{ background: "rgba(16, 185, 129, 0.2)", color: "#34d399", padding: "2px 8px", borderRadius: "4px", fontWeight: "800", fontSize: "0.8rem" }}>
+                          {count} logged
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Repeat Equipment Hazards Table */}
+              <div style={{ background: "#0c1524", border: "1px solid #1e293b", borderRadius: "10px", padding: "1rem" }}>
+                <h3 style={{ fontSize: "1rem", color: "#fbbf24", marginBottom: "0.75rem" }}>⚙️ Repeat Equipment Vulnerabilities</h3>
+                <table className="tickets-table" style={{ margin: 0 }}>
+                  <thead>
+                    <tr>
+                      <th>Equipment Tag</th>
+                      <th>Occurrences</th>
+                      <th>Primary Hazard</th>
+                      <th>Primary Zone</th>
+                      <th>Maintenance Recommendation</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {trendsData.repeat_equipment_hazards?.length > 0 ? (
+                      trendsData.repeat_equipment_hazards.map((eq, idx) => (
+                        <tr key={idx}>
+                          <td><strong>{eq.equipment}</strong></td>
+                          <td><span style={{ color: "#ef4444", fontWeight: "800" }}>{eq.occurrences}x</span></td>
+                          <td>{eq.most_common_hazard}</td>
+                          <td>{eq.zone}</td>
+                          <td style={{ color: "#94a3b8" }}>Requires scheduled engineering overhaul & PM check</td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan="5" style={{ textAlign: "center", padding: "1rem", color: "#64748b" }}>
+                          No repeat equipment anomalies identified yet.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ) : null}
+        </div>
+      )}
+
+      {/* VIEW 3: TEAM CULTURE & POSITIVE REINFORCEMENT */}
+      {dashboardView === "culture" && (
+        <div style={{ color: "#f8fafc" }}>
+          {cultureLoading ? (
+            <p style={{ textAlign: "center", padding: "2rem", color: "#94a3b8" }}>Loading culture metrics...</p>
+          ) : cultureData ? (
+            <div>
+              {/* Headline Community Banner */}
+              <div style={{
+                background: "linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(6, 78, 59, 0.4) 100%)",
+                border: "1.5px solid #10b981",
+                borderRadius: "14px",
+                padding: "1.5rem",
+                marginBottom: "1.5rem",
+                display: "flex",
+                alignItems: "center",
+                gap: "1.5rem",
+              }}>
+                <div style={{ fontSize: "3.5rem" }}>🎉</div>
+                <div>
+                  <h2 style={{ fontSize: "1.5rem", color: "#34d399", margin: "0 0 0.5rem 0", fontWeight: "900" }}>
+                    {cultureData.total_hazards_fixed} Industrial Hazards Fixed This Month!
+                  </h2>
+                  <p style={{ color: "#e2e8f0", margin: "0 0 0.25rem 0", fontSize: "0.95rem" }}>
+                    {cultureData.impact_statement_en}
+                  </p>
+                  <p style={{ color: "#94a3b8", margin: 0, fontSize: "0.85rem", fontStyle: "italic" }}>
+                    {cultureData.impact_statement_hi}
+                  </p>
+                </div>
+              </div>
+
+              {/* Anti-Surveillance Guarantee Callout */}
+              <div style={{
+                background: "#0f172a",
+                border: "1px solid #38bdf8",
+                borderRadius: "10px",
+                padding: "1rem 1.25rem",
+                marginBottom: "1.5rem",
+                display: "flex",
+                alignItems: "center",
+                gap: "12px",
+              }}>
+                <div style={{ fontSize: "1.8rem" }}>🛡️</div>
+                <div>
+                  <strong style={{ color: "#38bdf8", fontSize: "0.95rem" }}>BSL Anti-Surveillance & Psychological Safety Policy:</strong>
+                  <p style={{ margin: "4px 0 0 0", color: "#cbd5e1", fontSize: "0.85rem", lineHeight: "1.4" }}>
+                    Under SAIL / Bokaro Steel Plant guidelines, safety reporting is collaborative problem-solving. No worker rankings, leaderboards, or disciplinary consequences exist for near-misses. Recognition is awarded collectively to plant shifts.
+                  </p>
+                </div>
+              </div>
+
+              {/* Shift Collaboration Breakdown */}
+              <div style={{ background: "#0c1524", border: "1px solid #1e293b", borderRadius: "10px", padding: "1.25rem", marginBottom: "1.5rem" }}>
+                <h3 style={{ fontSize: "1rem", color: "#38bdf8", marginBottom: "1rem" }}>
+                  👥 Shift Safety Participation (Collective Team Metrics)
+                </h3>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "1rem" }}>
+                  {cultureData.shift_participation?.map((sp) => (
+                    <div key={sp.shift} style={{ background: "#0f1d32", border: "1px solid #334155", borderRadius: "8px", padding: "1rem", textAlign: "center" }}>
+                      <div style={{ fontSize: "1.1rem", fontWeight: "800", color: "#f8fafc", marginBottom: "4px" }}>{sp.shift}</div>
+                      <div style={{ fontSize: "1.75rem", fontWeight: "900", color: "#34d399", marginBottom: "4px" }}>{sp.pct}%</div>
+                      <div style={{ fontSize: "0.8rem", color: "#94a3b8" }}>{sp.count} Reports Logged</div>
+                      <div style={{ fontSize: "0.8rem", color: "#38bdf8", fontWeight: "700", marginTop: "2px" }}>{sp.resolved} Hazards Permanently Fixed</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : null}
+        </div>
+      )}
 
       {/* Ticket Inspector Modal / Drawer */}
       {selectedTicket && (
@@ -273,6 +637,11 @@ export default function Dashboard() {
                 <span className={`status-pill status-${selectedTicket.status}`} style={{ marginLeft: "8px" }}>
                   {selectedTicket.status}
                 </span>
+                {selectedTicket.anonymous_tracking_code && (
+                  <span style={{ marginLeft: "8px", background: "rgba(139, 92, 246, 0.2)", color: "#c084fc", border: "1px solid #7c3aed", padding: "2px 8px", borderRadius: "6px", fontSize: "0.75rem", fontWeight: "800" }}>
+                    🔒 Code: {selectedTicket.anonymous_tracking_code}
+                  </span>
+                )}
               </div>
               <button className="close-btn" onClick={() => setSelectedTicket(null)}>
                 ✕
@@ -280,6 +649,52 @@ export default function Dashboard() {
             </div>
 
             <div className="modal-body">
+              {/* Lifecycle Stage Progress Bar */}
+              <div style={{ background: "#070d18", border: "1px solid #1e293b", borderRadius: "10px", padding: "10px 14px", marginBottom: "1rem" }}>
+                <div style={{ fontSize: "0.75rem", fontWeight: "700", color: "#94a3b8", textTransform: "uppercase", marginBottom: "8px" }}>
+                  Near-Miss Lifecycle Milestone:
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  {LIFECYCLE_STAGES.map((st, idx) => {
+                    const currentIdx = LIFECYCLE_STAGES.findIndex((s) => s.key === (selectedTicket.lifecycle_stage || "received"));
+                    const isPassed = idx <= currentIdx;
+                    const isCurrent = idx === currentIdx;
+                    return (
+                      <div key={st.key} style={{ display: "flex", flexDirection: "column", alignItems: "center", flex: 1 }}>
+                        <div style={{
+                          width: "30px",
+                          height: "30px",
+                          borderRadius: "15px",
+                          display: "flex",
+                          justifyContent: "center",
+                          alignItems: "center",
+                          fontSize: "0.85rem",
+                          background: isPassed ? "rgba(16, 185, 129, 0.2)" : "#1e293b",
+                          border: isCurrent ? "2px solid #38bdf8" : isPassed ? "1px solid #10b981" : "1px solid #334155",
+                          color: isPassed ? "#34d399" : "#64748b",
+                          marginBottom: "4px",
+                        }}>
+                          {st.icon}
+                        </div>
+                        <div style={{ fontSize: "0.68rem", fontWeight: isCurrent ? "800" : "600", color: isCurrent ? "#38bdf8" : isPassed ? "#e2e8f0" : "#64748b", textAlign: "center" }}>
+                          {st.label}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Anonymous Report Notice */}
+              {selectedTicket.is_anonymous && (
+                <div style={{ background: "rgba(124, 58, 237, 0.12)", border: "1px solid #7c3aed", borderRadius: "8px", padding: "10px 14px", marginBottom: "1rem", display: "flex", alignItems: "center", gap: "10px" }}>
+                  <span style={{ fontSize: "1.25rem" }}>🔒</span>
+                  <div style={{ fontSize: "0.82rem", color: "#e9d5ff", lineHeight: "1.4" }}>
+                    <strong>Protected Anonymous Near-Miss:</strong> Attributed to Shift {selectedTicket.shift || "General"} & Zone {selectedTicket.zone_id || "Plant"}. Reporter identity is strictly unrecorded.
+                  </div>
+                </div>
+              )}
+
               {/* Recurring Hazard Alert */}
               {similarData?.recurring_hazard && (
                 <div className="hazard-alert-banner">
@@ -303,7 +718,7 @@ export default function Dashboard() {
                     <strong>Reported At:</strong> {new Date(selectedTicket.created_at).toLocaleString()}
                   </div>
                   <div>
-                    <strong>Employee / Badge:</strong> {selectedTicket.worker_badge_id || selectedTicket.employee_id || "Anonymous"}
+                    <strong>Employee / Badge:</strong> {selectedTicket.is_anonymous ? "🔒 Protected (Anonymous)" : (selectedTicket.worker_badge_id || selectedTicket.employee_id || "Not Provided")}
                   </div>
                   <div>
                     <strong>Reporting Mode:</strong>{" "}
@@ -315,7 +730,7 @@ export default function Dashboard() {
                       background: selectedTicket.reporting_mode === "kiosk" ? "rgba(56, 189, 248, 0.2)" : selectedTicket.reporting_mode === "supervisor_proxy" ? "rgba(245, 158, 11, 0.2)" : "rgba(100, 116, 139, 0.2)",
                       color: selectedTicket.reporting_mode === "kiosk" ? "#38bdf8" : selectedTicket.reporting_mode === "supervisor_proxy" ? "#f59e0b" : "#cbd5e1",
                     }}>
-                      {selectedTicket.reporting_mode === "kiosk" ? `🏢 Kiosk (${selectedTicket.kiosk_station_id || "Station"})` : selectedTicket.reporting_mode === "supervisor_proxy" ? `🛡️ Supervisor Proxy (${selectedTicket.reporter_supervisor_id || "Supervisor"})` : "📱 Personal Device"}
+                      {selectedTicket.reporting_mode === "kiosk" ? `🏢 Kiosk (${selectedTicket.kiosk_station_id || "Station"})` : selectedTicket.reporting_mode === "supervisor_proxy" ? `🛡️ Supervisor Proxy (${selectedTicket.reporter_supervisor_id || "Supervisor"})` : selectedTicket.is_anonymous ? "🔒 Anonymous Near-Miss" : "📱 Personal Device"}
                     </span>
                   </div>
                   <div>
@@ -325,6 +740,11 @@ export default function Dashboard() {
                   <div>
                     <strong>Reported Zone:</strong> {selectedTicket.zone_id || "Unspecified"}
                   </div>
+                  {selectedTicket.shift && (
+                    <div>
+                      <strong>Operational Shift:</strong> {selectedTicket.shift}
+                    </div>
+                  )}
                 </div>
 
                 <div className="narrative-box">
@@ -406,129 +826,12 @@ export default function Dashboard() {
                           <div><strong>Confidence:</strong> <span style={{ color: "#38bdf8", fontWeight: "700" }}>{Math.round((vAnalysis.confidence || 0) * 100)}%</span></div>
                           <div><strong>Detector Model:</strong> <span style={{ color: "#cbd5e1" }}>{vAnalysis.model_version || "BSL-Vision-v2.5"}</span></div>
                           <div><strong>License:</strong> <span style={{ color: "#34d399", fontWeight: "700" }}>{vAnalysis.detector_license || "Apache-2.0"}</span></div>
-                          {vAnalysis.image_sha256 && (
-                            <div style={{ gridColumn: "span 2" }}>
-                              <strong>SHA-256 Fingerprint:</strong> <code style={{ color: "#93c5fd", fontSize: "0.72rem" }}>{vAnalysis.image_sha256}</code>
-                            </div>
-                          )}
-                          {vAnalysis.video_metadata && (
-                            <div style={{ gridColumn: "span 2", color: "#a5b4fc" }}>
-                              <strong>Video Sampling:</strong> {vAnalysis.video_metadata.sampled_frames_count} frames sampled across duration (Keyframe @ {vAnalysis.video_metadata.key_frame_timestamp_s}s)
-                            </div>
-                          )}
                         </div>
-
-                        {/* Localized Detection Boxes */}
-                        {vAnalysis.evidence_boxes && vAnalysis.evidence_boxes.length > 0 && (
-                          <div style={{ marginTop: "0.5rem", paddingTop: "0.5rem", borderTop: "1px solid #1e293b" }}>
-                            <span style={{ fontSize: "0.75rem", color: "#64748b", textTransform: "uppercase", fontWeight: "700", display: "block", marginBottom: "0.3rem" }}>
-                              Localized Detections & PPE:
-                            </span>
-                            <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
-                              {vAnalysis.evidence_boxes.map((b, idx) => (
-                                <span key={idx} style={{
-                                  display: "inline-flex",
-                                  alignItems: "center",
-                                  padding: "2px 8px",
-                                  borderRadius: "4px",
-                                  fontSize: "0.75rem",
-                                  background: "#1e293b",
-                                  color: "#f8fafc",
-                                  border: `1px solid ${b.color || "#3b82f6"}`,
-                                }}>
-                                  <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: b.color || "#3b82f6", marginRight: "6px" }}></span>
-                                  {b.label} ({Math.round((b.confidence || 0) * 100)}%)
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Experimental Warning */}
-                        {vAnalysis.is_experimental && (
-                          <div style={{
-                            marginTop: "0.5rem",
-                            padding: "0.5rem 0.75rem",
-                            borderRadius: "6px",
-                            background: "rgba(239, 68, 68, 0.15)",
-                            border: "1px solid #ef4444",
-                            color: "#fca5a5",
-                            fontSize: "0.75rem",
-                            fontWeight: "600",
-                          }}>
-                            ⚠️ EXPERIMENTAL / NO VERIFIED PLANT TRAINING DATA: Detection for '{vAnalysis.detected_event}' is unvalidated. Do not rely on AI for this hazard class.
-                          </div>
-                        )}
-
-                        <p style={{ margin: "0.5rem 0 0", fontSize: "0.78rem", color: "#cbd5e1", lineHeight: "1.3" }}>
-                          {vAnalysis.visual_summary}
-                        </p>
-                        <p style={{ margin: "0.3rem 0 0", fontSize: "0.7rem", color: "#64748b", fontStyle: "italic" }}>
-                          {vAnalysis.advisory_notice || "AI Vision output is evidence-only under Apache-2.0 license."}
-                        </p>
                       </div>
                     )}
                   </div>
                 );
-              })() : (
-                <div className="inspector-section photo-inspector-section" style={{ opacity: 0.75 }}>
-                  <h4>📸 Visual Field Evidence</h4>
-                  <p style={{ fontSize: "0.85rem", color: "#94a3b8", margin: "0.25rem 0" }}>
-                    <em>Optional evidence: No photo or video proof attached to this report. Incident processed via verbal interview findings.</em>
-                  </p>
-                </div>
-              )}
-
-              {/* Spatial Impact Assessment */}
-              {selectedTicket.impact_assessment?.applicable && (
-                <div className="inspector-section">
-                  <h4>Spatial Impact Assessment</h4>
-                  <div className="impact-box">
-                    <p>
-                      <strong>Affected Zones:</strong> {selectedTicket.impact_assessment.affected_zones.length} zone(s)
-                      within hazard radius
-                    </p>
-                    <p>
-                      <strong>Estimated Workforce at Risk:</strong>{" "}
-                      {selectedTicket.impact_assessment.estimated_persons_at_risk_range[0]} –{" "}
-                      {selectedTicket.impact_assessment.estimated_persons_at_risk_range[1]} persons
-                    </p>
-                    {selectedTicket.impact_assessment.civilian_exposure_alert && (
-                      <p className="civilian-alert">
-                        ⚠ <strong>CIVILIAN EXPOSURE WARNING:</strong> Blast or toxic plume envelope extends near plant perimeter!
-                      </p>
-                    )}
-                    <table className="sub-table">
-                      <thead>
-                        <tr>
-                          <th>Zone</th>
-                          <th>Zone ID</th>
-                          <th>Band</th>
-                          <th>Distance</th>
-                          <th>Modeled At Risk</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {selectedTicket.impact_assessment.affected_zones.map((az) => (
-                          <tr key={az.zone_id}>
-                            <td>{az.name}</td>
-                            <td>{az.zone_id}</td>
-                            <td>
-                              <span className={`band-pill band-${az.band}`}>{az.band}</span>
-                            </td>
-                            <td>{az.distance_m} m</td>
-                            <td>
-                              {az.estimated_persons_at_risk_range
-                                ? `${az.estimated_persons_at_risk_range[0]}–${az.estimated_persons_at_risk_range[1]}`
-                                : "Unmodeled"}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
+              })() : null}
 
               {/* Statutory Rule-Based Severity Matrix Breakdown */}
               <div className="inspector-section">
@@ -569,70 +872,105 @@ export default function Dashboard() {
                 )}
               </div>
 
-              {/* Verified Evidence Findings Matrix */}
-              {selectedTicket.safety_report?.verified_summary && (
-                <div className="inspector-section">
-                  <h4>Verified Evidence & Fact Findings</h4>
-                  <table className="findings-table">
-                    <tbody>
-                      <tr>
-                        <td className="finding-label">Visual Confirmation:</td>
-                        <td className="finding-value">{selectedTicket.safety_report.verified_summary.observation_mode}</td>
-                      </tr>
-                      <tr>
-                        <td className="finding-label">Hazard Activity:</td>
-                        <td className="finding-value">{selectedTicket.safety_report.verified_summary.active_state}</td>
-                      </tr>
-                      <tr>
-                        <td className="finding-label">Identified Equipment:</td>
-                        <td className="finding-value"><strong>{selectedTicket.safety_report.verified_summary.equipment}</strong></td>
-                      </tr>
-                      <tr>
-                        <td className="finding-label">Personnel Exposed:</td>
-                        <td className="finding-value">{selectedTicket.safety_report.verified_summary.exposed_personnel}</td>
-                      </tr>
-                      <tr>
-                        <td className="finding-label">Reported Symptoms:</td>
-                        <td className="finding-value">{selectedTicket.safety_report.verified_summary.symptoms}</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              )}
+              {/* Phase 6: Supervisor & Safety Officer Corrective Action Workflow */}
+              <div className="inspector-section" style={{ background: "#0b1528", border: "1.5px solid #38bdf8", borderRadius: "8px", padding: "1rem" }}>
+                <h4 style={{ color: "#38bdf8", margin: "0 0 0.5rem 0" }}>🛠️ Corrective Action Assignment</h4>
+                <p style={{ fontSize: "0.8rem", color: "#94a3b8", margin: "0 0 1rem 0" }}>
+                  Assign physical remediation work order with owner and due date. Never leave reports in a black hole.
+                </p>
 
-              {/* Verification Interview Transcript */}
-              {selectedTicket.verification_questions?.length > 0 && (
-                <div className="inspector-section">
-                  <h4>Verification Interview Q&A ({selectedTicket.verification_status?.replaceAll("_", " ")})</h4>
-                  <p className="subtitle">
-                    Verification Score:{" "}
-                    <strong>
-                      {selectedTicket.verification_score != null
-                        ? `${Math.round(selectedTicket.verification_score * 100)}%`
-                        : "N/A"}
-                    </strong>
-                  </p>
-                  <div className="qa-list">
-                    {selectedTicket.verification_questions.map((q, idx) => (
-                      <div key={idx} className="qa-item">
-                        <p className="qa-question">
-                          <strong>Q{idx + 1}:</strong> {q}
-                        </p>
-                        <p className="qa-answer">
-                          <strong>A:</strong> {selectedTicket.verification_answers?.[idx] || "—"}
-                          {selectedTicket.verification_answers_en?.[idx] &&
-                            selectedTicket.verification_answers_en[idx] !== selectedTicket.verification_answers[idx] && (
-                              <span className="translated-note">
-                                {" "}
-                                (EN: "{selectedTicket.verification_answers_en[idx]}")
-                              </span>
-                            )}
-                        </p>
-                      </div>
-                    ))}
+                <form onSubmit={handleAssignAction}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "10px" }}>
+                    <div>
+                      <label style={{ fontSize: "0.75rem", color: "#cbd5e1", fontWeight: "700", display: "block", marginBottom: "4px" }}>
+                        Assigned Remediator / Maintenance Team:
+                      </label>
+                      <input
+                        type="text"
+                        style={{ width: "100%", padding: "8px", background: "#070d18", border: "1px solid #334155", borderRadius: "6px", color: "#fff", fontSize: "0.85rem" }}
+                        placeholder="e.g. Mechanical Maint Team B / A. Verma"
+                        value={assignedTo}
+                        onChange={(e) => setAssignedTo(e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: "0.75rem", color: "#cbd5e1", fontWeight: "700", display: "block", marginBottom: "4px" }}>
+                        Remediation Due Date:
+                      </label>
+                      <input
+                        type="date"
+                        style={{ width: "100%", padding: "8px", background: "#070d18", border: "1px solid #334155", borderRadius: "6px", color: "#fff", fontSize: "0.85rem" }}
+                        value={dueDate}
+                        onChange={(e) => setDueDate(e.target.value)}
+                      />
+                    </div>
                   </div>
+
+                  <div style={{ marginBottom: "10px" }}>
+                    <label style={{ fontSize: "0.75rem", color: "#cbd5e1", fontWeight: "700", display: "block", marginBottom: "4px" }}>
+                      Corrective Action Task Description:
+                    </label>
+                    <textarea
+                      rows={2}
+                      style={{ width: "100%", padding: "8px", background: "#070d18", border: "1px solid #334155", borderRadius: "6px", color: "#fff", fontSize: "0.85rem" }}
+                      placeholder="e.g. Replace damaged hydraulic valve seal and test line pressure under LOTO."
+                      value={correctiveAction}
+                      onChange={(e) => setCorrectiveAction(e.target.value)}
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    style={{ background: "#38bdf8", color: "#070d18", fontWeight: "800", padding: "8px 16px", borderRadius: "6px", border: "none", cursor: "pointer" }}
+                    disabled={actionLoading}
+                  >
+                    {actionLoading ? "Assigning..." : "Assign Corrective Action"}
+                  </button>
+                </form>
+
+                {/* Verification & Closure SLA Section */}
+                <div style={{ marginTop: "1.25rem", borderTop: "1px solid #1e293b", paddingTop: "1rem" }}>
+                  <h4 style={{ color: "#34d399", margin: "0 0 0.5rem 0" }}>✅ Hazard Verification & Closure</h4>
+                  {selectedTicket.closure_notes ? (
+                    <div style={{ background: "rgba(16, 185, 129, 0.12)", border: "1px solid #10b981", borderRadius: "6px", padding: "10px", marginTop: "8px" }}>
+                      <strong style={{ color: "#10b981", fontSize: "0.85rem" }}>Permanently Resolved:</strong>
+                      <p style={{ margin: "4px 0 0 0", color: "#e2e8f0", fontSize: "0.85rem" }}>{selectedTicket.closure_notes}</p>
+                      {selectedTicket.closure_time_hours != null && (
+                        <div style={{ marginTop: "6px", color: "#34d399", fontWeight: "800", fontSize: "0.8rem" }}>
+                          ⚡ Turnaround SLA: Resolved in {selectedTicket.closure_time_hours} hours from report intake
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <form onSubmit={handleCloseAction}>
+                      <div style={{ marginBottom: "10px" }}>
+                        <label style={{ fontSize: "0.75rem", color: "#cbd5e1", fontWeight: "700", display: "block", marginBottom: "4px" }}>
+                          Verification Notes & Resolution Evidence:
+                        </label>
+                        <textarea
+                          rows={2}
+                          style={{ width: "100%", padding: "8px", background: "#070d18", border: "1px solid #334155", borderRadius: "6px", color: "#fff", fontSize: "0.85rem" }}
+                          placeholder="e.g. Work Order #WO-8891 complete. Valve replaced and pressure test passed at 14:30."
+                          value={closureNotes}
+                          onChange={(e) => setClosureNotes(e.target.value)}
+                        />
+                      </div>
+                      <button
+                        type="submit"
+                        style={{ background: "#10b981", color: "#070d18", fontWeight: "800", padding: "8px 16px", borderRadius: "6px", border: "none", cursor: "pointer" }}
+                        disabled={actionLoading}
+                      >
+                        {actionLoading ? "Closing..." : "Verify & Close Hazard"}
+                      </button>
+                    </form>
+                  )}
+                  {actionMsg && (
+                    <div style={{ marginTop: "8px", color: "#38bdf8", fontSize: "0.85rem", fontWeight: "700" }}>
+                      ✓ {actionMsg}
+                    </div>
+                  )}
                 </div>
-              )}
+              </div>
 
               {/* RAG Guidance & Citations */}
               {selectedTicket.guidance_text && (
@@ -648,84 +986,13 @@ export default function Dashboard() {
                   )}
                   <div className="guidance-box">
                     <pre className="guidance-pre">{selectedTicket.guidance_text}</pre>
-                    {selectedTicket.guidance_sources?.length > 0 && (
-                      <div className="sources-list">
-                        <strong>Referenced Standard Operating Procedures:</strong>
-                        <ul>
-                          {selectedTicket.guidance_sources.map((s, i) => (
-                            <li key={i}>
-                              {s.title} — <em>{s.section}</em> ({s.path})
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Similar Historical Incidents */}
-              {similarData?.similar_tickets?.length > 0 && (
-                <div className="inspector-section">
-                  <h4>Similar Past Incidents</h4>
-                  <table className="sub-table">
-                    <thead>
-                      <tr>
-                        <th>ID</th>
-                        <th>Date</th>
-                        <th>Zone</th>
-                        <th>Category</th>
-                        <th>Similarity</th>
-                        <th>Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {similarData.similar_tickets.map((st) => (
-                        <tr key={st.id}>
-                          <td>{st.id}</td>
-                          <td>{new Date(st.created_at).toLocaleDateString()}</td>
-                          <td>
-                            {st.zone_id}{" "}
-                            {st.is_same_zone && <span className="same-zone-tag">Same Zone</span>}
-                          </td>
-                          <td>{st.predicted_category?.replaceAll("_", " ")}</td>
-                          <td>{Math.round(st.similarity * 100)}%</td>
-                          <td>{st.status}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-
-              {/* Designated Emergency Dispatch Recipients */}
-              {selectedTicket.safety_report?.recipients?.length > 0 && (
-                <div className="inspector-section recipients-inspector-section">
-                  <h4>🚨 Designated Bokaro Emergency Dispatch Recipients</h4>
-                  <p className="subtitle" style={{ marginBottom: "0.75rem" }}>
-                    Automated safety authority dispatch routing based on hazard category, spatial zone, and risk score:
-                  </p>
-                  <div className="recipients-grid">
-                    {selectedTicket.safety_report.recipients.map((rec, idx) => (
-                      <div key={idx} className="recipient-row-card">
-                        <div className="recipient-row-header">
-                          <strong>{rec.department || rec.dept}</strong>
-                          <span className="recipient-unit-badge">{rec.priority || rec.unit}</span>
-                        </div>
-                        <div className="recipient-row-details">
-                          <div><span className="rec-label">Role:</span> {rec.role}</div>
-                          <div><span className="rec-label">Contact / Ext:</span> <code>{rec.contact || rec.hotline}</code></div>
-                          <div><span className="rec-label">Status:</span> <span className="channel-pill">{rec.status || rec.dispatch_channel}</span></div>
-                        </div>
-                      </div>
-                    ))}
                   </div>
                 </div>
               )}
 
               {/* Resolution & Officer Actions */}
               <div className="inspector-section resolution-section">
-                <h4>Safety Officer Actions & Resolution</h4>
+                <h4>Safety Officer Actions & Routing</h4>
                 <form onSubmit={handleSaveUpdates} className="resolution-form">
                   <div className="form-row">
                     <div className="form-field">

@@ -15,6 +15,8 @@ class IncidentCreate(BaseModel):
     kiosk_station_id: str | None = None
     zone_id: str | None = None
     language: str = "en"
+    is_anonymous: bool = False
+    shift: str | None = None
 
 
 class AnswerSubmit(BaseModel):
@@ -42,6 +44,16 @@ class TicketOut(BaseModel):
     worker_badge_id: str | None = None
     kiosk_station_id: str | None = None
     report_type: str
+    is_anonymous: bool = False
+    shift: str | None = None
+    anonymous_tracking_code: str | None = None
+    lifecycle_stage: str = "received"
+    corrective_action: str | None = None
+    assigned_to: str | None = None
+    due_date: datetime | None = None
+    closed_at: datetime | None = None
+    closure_time_hours: float | None = None
+    closure_notes: str | None = None
     incident_description: str
     incident_description_en: str
     language: str
@@ -164,4 +176,56 @@ class EmergencyTeamDefinition(BaseModel):
     whatsapp: str | None = None
     radio_channel: str | None = None
     coverage_zones: list[str] = Field(default_factory=lambda: ["ALL"])
+
+
+class ActionAssignRequest(BaseModel):
+    assigned_to: str
+    corrective_action: str
+    due_date: datetime | str | None = None
+
+
+class ActionCloseRequest(BaseModel):
+    closure_notes: str
+    closure_evidence_path: str | None = None
+
+
+class IncidentTrackerOut(BaseModel):
+    ticket_id: str
+    plant_id: str
+    anonymous_tracking_code: str | None = None
+    is_anonymous: bool = False
+    created_at: datetime
+    status: str
+    lifecycle_stage: str
+    zone_id: str | None = None
+    shift: str | None = None
+    predicted_category: str | None = None
+    description: str
+    assigned_to: str | None = None
+    corrective_action: str | None = None
+    due_date: datetime | None = None
+    closed_at: datetime | None = None
+    closure_time_hours: float | None = None
+    closure_notes: str | None = None
+    history_events: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class SafetyTrendsOut(BaseModel):
+    plant_id: str
+    total_incidents: int
+    total_near_misses: int
+    closed_near_misses: int
+    avg_closure_time_hours: float
+    hazards_by_zone: dict[str, int]
+    hazards_by_shift: dict[str, int]
+    repeat_equipment_hazards: list[dict[str, Any]]
+
+
+class CultureMetricsOut(BaseModel):
+    plant_id: str
+    total_hazards_fixed: int
+    shift_participation: list[dict[str, Any]]
+    proactive_near_miss_ratio: float
+    impact_statement_en: str
+    impact_statement_hi: str
 

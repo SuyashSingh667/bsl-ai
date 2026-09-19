@@ -30,6 +30,19 @@ class Ticket(Base):
     kiosk_station_id: Mapped[str | None] = mapped_column(String, nullable=True)
     report_type: Mapped[str] = mapped_column(String)  # "suspected" | "emergency"
 
+    # Phase 6: Anonymous no-blame reporting and closed-loop lifecycle tracking
+    is_anonymous: Mapped[bool] = mapped_column(Boolean, default=False)
+    shift: Mapped[str | None] = mapped_column(String, nullable=True)  # "Shift A", "Shift B", "Shift C", "General"
+    anonymous_tracking_code: Mapped[str | None] = mapped_column(String, nullable=True, index=True)
+    lifecycle_stage: Mapped[str] = mapped_column(String, default="received")  # "received" | "under_review" | "action_assigned" | "action_taken" | "resolved"
+    corrective_action: Mapped[str | None] = mapped_column(Text, nullable=True)
+    assigned_to: Mapped[str | None] = mapped_column(String, nullable=True)
+    due_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    closure_time_hours: Mapped[float | None] = mapped_column(Float, nullable=True)
+    closure_evidence_path: Mapped[str | None] = mapped_column(String, nullable=True)
+    closure_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+
     incident_description: Mapped[str] = mapped_column(Text)
     incident_description_en: Mapped[str] = mapped_column(Text)
     language: Mapped[str] = mapped_column(String, default="en")

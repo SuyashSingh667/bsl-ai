@@ -22,13 +22,21 @@ type WorkflowStep =
 export default function App() {
   const [step, setStep] = useState<WorkflowStep>('select_type');
   const [reportType, setReportType] = useState<'emergency' | 'suspected'>('suspected');
+  const [isAnonymous, setIsAnonymous] = useState<boolean>(false);
+  const [shift, setShift] = useState<string>('Shift A');
   const [ticket, setTicket] = useState<Ticket | null>(null);
   const [kioskSession, setKioskSession] = useState<KioskSession | null>(null);
   const [showConfigModal, setShowConfigModal] = useState<boolean>(false);
 
   // 1. Report type selected
-  const handleSelectReportType = (type: 'emergency' | 'suspected') => {
+  const handleSelectReportType = (
+    type: 'emergency' | 'suspected',
+    anonymous: boolean = false,
+    reportingShift: string = 'Shift A'
+  ) => {
     setReportType(type);
+    setIsAnonymous(anonymous);
+    setShift(reportingShift);
     setStep('record_incident');
   };
 
@@ -111,6 +119,8 @@ export default function App() {
         {step === 'record_incident' && (
           <IncidentRecorderScreen
             reportType={reportType}
+            isAnonymous={isAnonymous}
+            shift={shift}
             onIncidentCreated={handleIncidentCreated}
             onBack={() => setStep('select_type')}
             kioskSession={kioskSession}

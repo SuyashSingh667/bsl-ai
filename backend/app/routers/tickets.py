@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from pathlib import Path
 import shutil
 import uuid
@@ -9,7 +10,7 @@ from sqlalchemy.orm import Session
 from app.config import PHOTO_UPLOAD_DIR
 from app.database import get_db
 from app.models import Ticket
-from app.schemas import TicketOut, TicketUpdate
+from app.schemas import ActionAssignRequest, ActionCloseRequest, TicketOut, TicketUpdate
 from app.services import routing, safety_rules, visual_analysis
 
 router = APIRouter(prefix="/tickets", tags=["tickets"])
@@ -208,9 +209,110 @@ def update_ticket(ticket_id: str, payload: TicketUpdate, db: Session = Depends(g
             actor_role="safety_officer",
             previous_state={"status": prev_status},
             new_state={"status": ticket.status, "routing_tier": ticket.routing_tier},
-            details={"resolution_notes": payload.resolution_notes},
+        )
+    except Exception:
+        pass
+    return ticket
+
+
+@router.post("/{ticket_id}/action/assign", response_model=TicketOut)
+def assign_corrective_action(
+    ticket_id: str,
+    payload: ActionAssignRequest,
+    db: Session = Depends(get_db),
+):
+    ticket = db.get(Ticket, ticket_id)
+    if not ticket:
+        raise HTTPException(404, "ticket not found")
+
+    ticket.assigned_to = payload.assigned_to
+    ticket.corrective_action = payload.corrective_action
+    ticket.lifecycle_stage = "action_assigned"
+
+    if payload.due_date:
+        if isinstance(payload.due_date, str):
+            try:
+                ticket.due_date = datetime.fromisoformat(payload.due_date.replace("Z", "+00:00"))
+            except Exception:
+                pass
+        else:
+            ticket.due_date = payload.due_date
+
+    db.add(ticket)
+    db.commit()
+    db.refresh(ticket)
+    _attach_photo_url(ticket)
+
+    try:
+        from app.services import audit_logger
+        audit_logger.log_event(
+            db=db,
+            action="CORRECTIVE_ACTION_ASSIGNED",
+            plant_id=ticket.plant_id,
+            ticket_id=ticket.id,
+            actor_id="SHIFT_SUPERVISOR",
+            actor_role="supervisor",
+            details={
+                "assigned_to": payload.assigned_to,
+                "corrective_action": payload.corrective_action,
+                "due_date": ticket.due_date.isoformat() if ticket.due_date else None,
+            },
         )
     except Exception:
         pass
 
     return ticket
+
+
+@router.post("/{ticket_id}/action/close", response_model=TicketOut)
+def close_corrective_action(
+    ticket_id: str,
+    payload: ActionCloseRequest,
+    db: Session = Depends(get_db),
+):
+    ticket = db.get(Ticket, ticket_id)
+    if not ticket:
+        raise HTTPException(404, "ticket not found")
+
+    now = datetime.now(timezone.utc)
+    ticket.closure_notes = payload.closure_notes
+    if payload.closure_evidence_path:
+        ticket.closure_evidence_path = payload.closure_evidence_path
+
+    ticket.status = "resolved"
+    ticket.lifecycle_stage = "resolved"
+    ticket.closed_at = now
+
+    # Compute closure turnaround time in hours
+    if ticket.created_at:
+        created_dt = ticket.created_at if ticket.created_at.tzinfo else ticket.created_at.replace(tzinfo=timezone.utc)
+        diff_s = (now - created_dt).total_seconds()
+        ticket.closure_time_hours = round(max(diff_s / 3600.0, 0.1), 1)
+
+    db.add(ticket)
+    db.commit()
+    db.refresh(ticket)
+    _attach_photo_url(ticket)
+
+    try:
+        from app.services import audit_logger
+        audit_logger.log_event(
+            db=db,
+            action="TICKET_RESOLVED_WITH_ACTION",
+            plant_id=ticket.plant_id,
+            ticket_id=ticket.id,
+            actor_id="SAFETY_OFFICER",
+            actor_role="safety_officer",
+            details={
+                "closure_notes": payload.closure_notes,
+                "closure_time_hours": ticket.closure_time_hours,
+            },
+        )
+    except Exception:
+        pass
+
+    return ticket
+
+
+close_action = close_corrective_action
+

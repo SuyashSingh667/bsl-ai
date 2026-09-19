@@ -135,3 +135,42 @@ export function photoUrl(path) {
 }
 
 export const mediaUrl = photoUrl;
+
+export async function assignAction(ticketId, { assignedTo, correctiveAction, dueDate }) {
+  return json(
+    await fetch(`${BASE}/tickets/${ticketId}/action/assign`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        assigned_to: assignedTo,
+        corrective_action: correctiveAction,
+        due_date: dueDate || null,
+      }),
+    })
+  );
+}
+
+export async function closeAction(ticketId, { closureNotes, closureEvidencePath }) {
+  return json(
+    await fetch(`${BASE}/tickets/${ticketId}/action/close`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        closure_notes: closureNotes,
+        closure_evidence_path: closureEvidencePath || null,
+      }),
+    })
+  );
+}
+
+export async function getSafetyTrends(plantId = "bsl_bokaro") {
+  return json(await fetch(`${BASE}/analytics/trends?plant_id=${encodeURIComponent(plantId)}`));
+}
+
+export async function getCultureMetrics(plantId = "bsl_bokaro") {
+  return json(await fetch(`${BASE}/analytics/culture?plant_id=${encodeURIComponent(plantId)}`));
+}
+
+export async function getIncidentTracker(identifier) {
+  return json(await fetch(`${BASE}/analytics/tracker/${encodeURIComponent(identifier)}`));
+}

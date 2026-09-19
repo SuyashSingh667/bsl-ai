@@ -29,6 +29,8 @@ interface IncidentRecorderScreenProps {
   onBack: () => void;
   kioskSession?: KioskSession | null;
   onSwitchToKiosk?: () => void;
+  isAnonymous?: boolean;
+  shift?: string;
 }
 
 const COMMON_ZONES = [
@@ -48,6 +50,8 @@ export const IncidentRecorderScreen: React.FC<IncidentRecorderScreenProps> = ({
   onBack,
   kioskSession,
   onSwitchToKiosk,
+  isAnonymous = false,
+  shift = 'Shift A',
 }) => {
   const [mode, setMode] = useState<'voice' | 'text'>('voice');
   const [selectedLanguage, setSelectedLanguage] = useState<string>(i18n.getLanguage());
@@ -101,7 +105,15 @@ export const IncidentRecorderScreen: React.FC<IncidentRecorderScreenProps> = ({
       }
 
       try {
-        const ticket = await createIncidentFromAudio(uri, reportType, selectedLanguage);
+        const ticket = await createIncidentFromAudio(uri, reportType, selectedLanguage, {
+          is_anonymous: isAnonymous,
+          shift,
+          zone_id: selectedZone,
+          worker_badge_id: isAnonymous ? undefined : kioskSession?.workerBadgeId,
+          reporter_supervisor_id: kioskSession?.supervisorId,
+          kiosk_station_id: kioskSession?.kioskStationId,
+          reporting_mode: kioskSession ? 'kiosk_supervisor' : (isAnonymous ? 'anonymous_near_miss' : 'personal'),
+        });
         setIsLoading(false);
         // Show transcript confirmation screen before proceeding
         setTranscribedTicket(ticket);
@@ -113,7 +125,12 @@ export const IncidentRecorderScreen: React.FC<IncidentRecorderScreenProps> = ({
           reportType,
           language: selectedLanguage,
           zone_id: selectedZone,
-          employee_id: kioskSession?.workerBadgeId,
+          employee_id: isAnonymous ? undefined : kioskSession?.workerBadgeId,
+          extraOptions: {
+            is_anonymous: isAnonymous,
+            shift,
+            zone_id: selectedZone,
+          },
         });
         setIsLoading(false);
 
@@ -127,6 +144,8 @@ export const IncidentRecorderScreen: React.FC<IncidentRecorderScreenProps> = ({
           routing_tier: reportType === 'emergency' ? 'emergency_authority' : 'log_only',
           verification_status: 'offline_queued',
           zone_id: selectedZone,
+          is_anonymous: isAnonymous,
+          shift,
         };
         Alert.alert(
           'Report Stored in Outbox',
@@ -154,6 +173,12 @@ export const IncidentRecorderScreen: React.FC<IncidentRecorderScreenProps> = ({
           incident_description: textInput.trim(),
           language: selectedLanguage,
           zone_id: selectedZone,
+          is_anonymous: isAnonymous,
+          shift,
+          worker_badge_id: isAnonymous ? undefined : kioskSession?.workerBadgeId,
+          reporter_supervisor_id: kioskSession?.supervisorId,
+          kiosk_station_id: kioskSession?.kioskStationId,
+          reporting_mode: kioskSession ? 'kiosk_supervisor' : (isAnonymous ? 'anonymous_near_miss' : 'personal'),
         });
         setIsLoading(false);
         onIncidentCreated(ticket);
@@ -165,7 +190,9 @@ export const IncidentRecorderScreen: React.FC<IncidentRecorderScreenProps> = ({
           incident_description: textInput.trim(),
           language: selectedLanguage,
           zone_id: selectedZone,
-          employee_id: kioskSession?.workerBadgeId,
+          employee_id: isAnonymous ? undefined : kioskSession?.workerBadgeId,
+          is_anonymous: isAnonymous,
+          shift,
         });
         setIsLoading(false);
 
@@ -173,6 +200,8 @@ export const IncidentRecorderScreen: React.FC<IncidentRecorderScreenProps> = ({
           id: `offline_${Date.now()}`,
           report_type: reportType,
           incident_description: textInput.trim(),
+          is_anonymous: isAnonymous,
+          shift,
           predicted_category: reportType === 'emergency' ? 'fire' : 'mechanical_failure',
           risk_score: reportType === 'emergency' ? 0.85 : 0.60,
           routing_tier: reportType === 'emergency' ? 'emergency_authority' : 'log_only',

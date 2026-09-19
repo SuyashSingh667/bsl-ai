@@ -8,6 +8,7 @@ from app.config import AUDIO_UPLOAD_DIR, PHOTO_UPLOAD_DIR
 from app.database import Base, engine
 from app.routers import (
     admin,
+    analytics,
     guidance,
     incidents,
     integrations,
@@ -51,6 +52,17 @@ async def lifespan(app: FastAPI):
             "reporter_supervisor_id VARCHAR",
             "worker_badge_id VARCHAR",
             "kiosk_station_id VARCHAR",
+            "is_anonymous BOOLEAN DEFAULT 0",
+            "shift VARCHAR",
+            "anonymous_tracking_code VARCHAR",
+            "lifecycle_stage VARCHAR DEFAULT 'received'",
+            "corrective_action TEXT",
+            "assigned_to VARCHAR",
+            "due_date TIMESTAMP",
+            "closed_at TIMESTAMP",
+            "closure_time_hours FLOAT",
+            "closure_evidence_path VARCHAR",
+            "closure_notes TEXT",
         ]:
             try:
                 conn.execute(text(f"ALTER TABLE tickets ADD COLUMN {col_def};"))
@@ -81,6 +93,7 @@ app.include_router(tickets.router)
 app.include_router(similar_incidents.router)
 app.include_router(admin.router)
 app.include_router(integrations.router)
+app.include_router(analytics.router)
 
 app.mount("/audio", StaticFiles(directory=str(AUDIO_UPLOAD_DIR)), name="audio")
 app.mount("/photos", StaticFiles(directory=str(PHOTO_UPLOAD_DIR)), name="photos")

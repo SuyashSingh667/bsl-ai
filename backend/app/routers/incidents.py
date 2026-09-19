@@ -105,7 +105,19 @@ def _create_ticket(
     worker_badge_id: str | None = None,
     kiosk_station_id: str | None = None,
     plant_id: str = "bsl_bokaro",
+    is_anonymous: bool = False,
+    shift: str | None = None,
 ) -> Ticket:
+    # Phase 6: Anonymous reporting strips worker badge and employee identity
+    tracking_code = None
+    if is_anonymous:
+        tracking_code = f"NM-{uuid.uuid4().hex[:6].upper()}"
+        employee_id = None
+        worker_badge_id = None
+        reporter_supervisor_id = None
+        if reporting_mode == "personal":
+            reporting_mode = "anonymous_near_miss"
+
     detected_from_text = detect_language_from_text(text)
     effective_lang = language or detected_from_text
     if effective_lang not in SUPPORTED_LANGUAGES:
@@ -158,6 +170,10 @@ def _create_ticket(
         worker_badge_id=worker_badge_id,
         kiosk_station_id=kiosk_station_id,
         report_type=effective_report_type,
+        is_anonymous=is_anonymous,
+        shift=shift,
+        anonymous_tracking_code=tracking_code,
+        lifecycle_stage="received",
         incident_description=text,
         incident_description_en=text_en,
         language=effective_lang,
@@ -232,13 +248,16 @@ def _create_ticket(
             action="INCIDENT_CREATED",
             plant_id=ticket.plant_id,
             ticket_id=ticket.id,
-            actor_id=worker_badge_id or employee_id or "ANON_WORKER",
-            actor_role=reporting_mode,
+            actor_id="ANONYMOUS" if is_anonymous else (worker_badge_id or employee_id or "ANON_WORKER"),
+            actor_role="anonymous_reporter" if is_anonymous else reporting_mode,
             details={
                 "category": category,
                 "report_type": effective_report_type,
                 "routing_tier": routing_tier,
                 "zone_id": effective_zone,
+                "is_anonymous": is_anonymous,
+                "shift": shift,
+                "tracking_code": tracking_code,
             },
         )
     except Exception:
@@ -273,6 +292,8 @@ def create_incident(payload: IncidentCreate, db: Session = Depends(get_db)):
         worker_badge_id=payload.worker_badge_id,
         kiosk_station_id=payload.kiosk_station_id,
         plant_id=payload.plant_id,
+        is_anonymous=payload.is_anonymous,
+        shift=payload.shift,
     )
 
 
@@ -289,6 +310,8 @@ def create_incident_from_audio(
     worker_badge_id: str | None = Form(None),
     kiosk_station_id: str | None = Form(None),
     plant_id: str = Form("bsl_bokaro"),
+    is_anonymous: bool = Form(False),
+    shift: str | None = Form(None),
     db: Session = Depends(get_db),
 ):
     dest = AUDIO_UPLOAD_DIR / f"{uuid.uuid4().hex[:12]}_{file.filename}"
@@ -331,5 +354,7 @@ def create_incident_from_audio(
         worker_badge_id=worker_badge_id,
         kiosk_station_id=kiosk_station_id,
         plant_id=plant_id,
+        is_anonymous=is_anonymous,
+        shift=shift,
     )
 

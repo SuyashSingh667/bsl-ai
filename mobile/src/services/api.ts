@@ -39,6 +39,16 @@ export interface Ticket {
   sop_gap_detected?: boolean;
   severity_factors?: any;
   ai_audit_trail?: any;
+  is_anonymous?: boolean;
+  shift?: string;
+  anonymous_tracking_code?: string;
+  lifecycle_stage?: string;
+  corrective_action?: string;
+  assigned_to?: string;
+  due_date?: string;
+  closed_at?: string;
+  closure_time_hours?: number;
+  closure_notes?: string;
   visual_analysis?: {
     detected_event: string;
     confidence: number;
@@ -72,6 +82,13 @@ export async function createIncidentFromText(payload: {
   incident_description: string;
   language?: string;
   zone_id?: string;
+  is_anonymous?: boolean;
+  shift?: string;
+  worker_badge_id?: string;
+  reporter_supervisor_id?: string;
+  kiosk_station_id?: string;
+  reporting_mode?: string;
+  plant_id?: string;
 }): Promise<Ticket> {
   const base = await getApiBaseUrl();
   const res = await fetch(`${base}/incidents`, {
@@ -89,7 +106,17 @@ export async function createIncidentFromText(payload: {
 export async function createIncidentFromAudio(
   audioUri: string,
   reportType: string,
-  language?: string
+  language?: string,
+  extraOptions?: {
+    is_anonymous?: boolean;
+    shift?: string;
+    worker_badge_id?: string;
+    reporter_supervisor_id?: string;
+    kiosk_station_id?: string;
+    reporting_mode?: string;
+    zone_id?: string;
+    plant_id?: string;
+  }
 ): Promise<Ticket> {
   const base = await getApiBaseUrl();
   const filename = audioUri.split('/').pop() || 'recording.m4a';
@@ -99,6 +126,30 @@ export async function createIncidentFromAudio(
   };
   if (language) {
     parameters.language = language;
+  }
+  if (extraOptions?.is_anonymous !== undefined) {
+    parameters.is_anonymous = extraOptions.is_anonymous ? 'true' : 'false';
+  }
+  if (extraOptions?.shift) {
+    parameters.shift = extraOptions.shift;
+  }
+  if (extraOptions?.zone_id) {
+    parameters.zone_id = extraOptions.zone_id;
+  }
+  if (extraOptions?.worker_badge_id) {
+    parameters.worker_badge_id = extraOptions.worker_badge_id;
+  }
+  if (extraOptions?.reporter_supervisor_id) {
+    parameters.reporter_supervisor_id = extraOptions.reporter_supervisor_id;
+  }
+  if (extraOptions?.kiosk_station_id) {
+    parameters.kiosk_station_id = extraOptions.kiosk_station_id;
+  }
+  if (extraOptions?.reporting_mode) {
+    parameters.reporting_mode = extraOptions.reporting_mode;
+  }
+  if (extraOptions?.plant_id) {
+    parameters.plant_id = extraOptions.plant_id;
   }
 
   const response = await FileSystem.uploadAsync(`${base}/incidents/audio`, audioUri, {
@@ -245,7 +296,8 @@ export async function syncQueuedOutboxItem(item: any): Promise<boolean> {
       await createIncidentFromAudio(
         item.payload.audioUri,
         item.payload.reportType,
-        item.payload.language
+        item.payload.language,
+        item.payload.extraOptions
       );
       return true;
     } else if (item.type === 'verification_answer') {
@@ -265,5 +317,90 @@ export async function syncQueuedOutboxItem(item: any): Promise<boolean> {
     console.warn(`[API] Failed to sync outbox item ${item.id}:`, err);
     return false;
   }
+}
+
+export interface IncidentTrackerData {
+  ticket_id: string;
+  plant_id: string;
+  anonymous_tracking_code?: string;
+  is_anonymous: boolean;
+  created_at: string;
+  status: string;
+  lifecycle_stage: string;
+  zone_id?: string;
+  shift?: string;
+  predicted_category?: string;
+  description: string;
+  assigned_to?: string;
+  corrective_action?: string;
+  due_date?: string;
+  closed_at?: string;
+  closure_time_hours?: number;
+  closure_notes?: string;
+  history_events: Array<{
+    id: string;
+    timestamp: string;
+    action: string;
+    actor_id: string;
+    actor_role: string;
+    details: any;
+  }>;
+}
+
+export interface CultureMetricsData {
+  plant_id: string;
+  total_hazards_fixed: number;
+  shift_participation: Array<{
+    shift: string;
+    count: number;
+    resolved: number;
+    pct: number;
+  }>;
+  proactive_near_miss_ratio: number;
+  impact_statement_en: string;
+  impact_statement_hi: string;
+}
+
+export async function getIncidentTracker(identifier: string): Promise<IncidentTrackerData> {
+  const base = await getApiBaseUrl();
+  const res = await fetch(`${base}/analytics/tracker/${encodeURIComponent(identifier)}`);
+  if (!res.ok) {
+    const txt = await res.text();
+    throw new Error(`Report not found (${res.status}): ${txt}`);
+  }
+  return res.json();
+}
+
+export async function getCultureMetrics(plantId: string = 'bsl_bokaro'): Promise<CultureMetricsData> {
+  const base = await getApiBaseUrl();
+  const res = await fetch(`${base}/analytics/culture?plant_id=${encodeURIComponent(plantId)}`);
+  if (!res.ok) {
+    const txt = await res.text();
+    throw new Error(`Failed to fetch culture metrics: ${txt}`);
+  }
+  return res.json();
+}
+
+export async function getReportExplainer(): Promise<{
+  title_en: string;
+  title_hi: string;
+  steps: Array<{
+    stage: string;
+    step_number: number;
+    title_en: string;
+    title_hi: string;
+    description_en: string;
+    description_hi: string;
+    guarantee_en: string;
+    guarantee_hi: string;
+  }>;
+}> {
+  const base = await getApiBaseUrl();
+  const res = await fetch(`${base}/analytics/explainer`);
+  if (!res.ok) {
+    const txt = await res.text();
+    throw new Error(`Failed to fetch explainer: ${txt}`);
+  }
+  return res.json();
 }
 
