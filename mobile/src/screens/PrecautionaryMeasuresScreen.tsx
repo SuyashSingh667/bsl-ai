@@ -167,6 +167,39 @@ export const PrecautionaryMeasuresScreen: React.FC<PrecautionaryMeasuresScreenPr
       <StepIndicator currentStep={4} />
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
+        {/* Safety-Critical AI Disclaimer Banner */}
+        <View style={styles.aiDisclaimerBanner}>
+          <Text style={styles.aiDisclaimerIcon}>⚠️</Text>
+          <View style={styles.aiDisclaimerTextWrap}>
+            <Text style={styles.aiDisclaimerTitle}>
+              {isHindi
+                ? 'एआई-जनित सुरक्षा सलाह — सुपरवाइजर से पुष्टि करें'
+                : 'AI-Generated Guidance — Verify with Supervisor'}
+            </Text>
+            <Text style={styles.aiDisclaimerSub}>
+              {isHindi
+                ? 'सभी उपाय बोकारो स्टील प्लांट अनुमोदित एसओपी (SOP) से लिए गए हैं। आपात स्थिति में सुपरवाइजर के आदेश का पालन करें।'
+                : 'Retrieve-and-quote citations from approved BSL SOPs. In an emergency, obey shift in-charge orders.'}
+            </Text>
+          </View>
+        </View>
+
+        {precautionsData?.sop_gap_detected ? (
+          <View style={styles.sopGapBanner}>
+            <Text style={styles.sopGapIcon}>🚨</Text>
+            <View style={styles.sopGapTextWrap}>
+              <Text style={styles.sopGapTitle}>
+                {isHindi ? 'एसओपी अंतर पाया गया (SOP Gap Detected)' : 'SOP Gap Detected'}
+              </Text>
+              <Text style={styles.sopGapSub}>
+                {isHindi
+                  ? 'इस घटना के लिए कोई अनुमोदित एसओपी उपलब्ध नहीं है। सार्वभौमिक सुरक्षित प्रोटोकॉल सक्रिय है।'
+                  : 'No approved SOP exists for this exact condition. Universal safe evacuation protocol is active.'}
+              </Text>
+            </View>
+          </View>
+        ) : null}
+
         {/* Header with Bilingual Title */}
         <View style={styles.alertHeader}>
           <View style={styles.iconCircle}>
@@ -318,6 +351,13 @@ export const PrecautionaryMeasuresScreen: React.FC<PrecautionaryMeasuresScreenPr
                 <Text style={[styles.measureText, isChecked && styles.measureTextChecked]}>
                   {textNative}
                 </Text>
+
+                {/* SOP Citation Tag */}
+                {m.citation ? (
+                  <View style={styles.sopCitationBadge}>
+                    <Text style={styles.sopCitationBadgeText}>📜 {m.citation}</Text>
+                  </View>
+                ) : null}
 
                 {/* Concrete Field Verification Action Tag */}
                 {checklistLabel ? (
@@ -652,5 +692,76 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 15,
     fontWeight: '800',
+  },
+  aiDisclaimerBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#451a03',
+    borderWidth: 1.5,
+    borderColor: '#f59e0b',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 14,
+  },
+  aiDisclaimerIcon: {
+    fontSize: 24,
+    marginRight: 10,
+  },
+  aiDisclaimerTextWrap: {
+    flex: 1,
+  },
+  aiDisclaimerTitle: {
+    color: '#fef3c7',
+    fontSize: 13,
+    fontWeight: '800',
+    marginBottom: 2,
+  },
+  aiDisclaimerSub: {
+    color: '#fde68a',
+    fontSize: 11,
+    lineHeight: 15,
+  },
+  sopGapBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#4c0519',
+    borderWidth: 1.5,
+    borderColor: '#e11d48',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 14,
+  },
+  sopGapIcon: {
+    fontSize: 24,
+    marginRight: 10,
+  },
+  sopGapTextWrap: {
+    flex: 1,
+  },
+  sopGapTitle: {
+    color: '#ffe4e6',
+    fontSize: 13,
+    fontWeight: '800',
+    marginBottom: 2,
+  },
+  sopGapSub: {
+    color: '#fecdd3',
+    fontSize: 11,
+    lineHeight: 15,
+  },
+  sopCitationBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#0f172a',
+    borderWidth: 1,
+    borderColor: '#38bdf8',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    marginBottom: 8,
+  },
+  sopCitationBadgeText: {
+    color: '#7dd3fc',
+    fontSize: 11,
+    fontWeight: '700',
   },
 });

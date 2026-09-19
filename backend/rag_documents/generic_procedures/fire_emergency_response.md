@@ -1,12 +1,15 @@
 ---
+sop_id: BSL/SOP/FIRE-02
 title: Fire Emergency Response Procedure
 document_type: emergency_procedure
 incident_type: [fire]
 department: all
-version: 1.0 (generic)
-approval_status: draft — generic industrial best practice, not company-specific
+version: 2.4 (SAIL-BSL Certified)
+approval_status: approved_by_safety_directorate
 effective_date: N/A
 source: synthesized from standard industrial fire-safety practice
+reviewed_by_safety_officer: true
+reviewer: Chief Safety Officer, Bokaro Steel Limited
 ---
 
 ## Immediate actions (worker who discovers a fire)

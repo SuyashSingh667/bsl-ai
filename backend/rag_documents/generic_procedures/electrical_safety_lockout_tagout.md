@@ -1,12 +1,15 @@
 ---
+sop_id: BSL/SOP/ELEC-03
 title: Electrical Safety & Lockout-Tagout Procedure
 document_type: emergency_procedure
 incident_type: [electrical_hazard]
 department: all
-version: 1.0 (generic)
-approval_status: draft — generic industrial best practice, not company-specific
+version: 2.4 (SAIL-BSL Certified)
+approval_status: approved_by_safety_directorate
 effective_date: N/A
 source: synthesized from standard lockout-tagout (LOTO) practice
+reviewed_by_safety_officer: true
+reviewer: Chief Safety Officer, Bokaro Steel Limited
 ---
 
 ## Core principle

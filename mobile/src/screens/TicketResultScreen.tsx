@@ -54,6 +54,30 @@ export const TicketResultScreen: React.FC<TicketResultScreenProps> = ({
           <Text style={styles.ticketIdText}>Ticket ID: {ticket.id}</Text>
         </View>
 
+        {/* Safety-Critical AI Advisory Notice */}
+        <View style={styles.aiNoticeBanner}>
+          <Text style={styles.aiNoticeIcon}>⚠️</Text>
+          <View style={styles.aiNoticeTextWrap}>
+            <Text style={styles.aiNoticeTitle}>AI-Generated Guidance — Verify with Supervisor</Text>
+            <Text style={styles.aiNoticeSub}>
+              Physical safety protocols must be confirmed with your plant area supervisor before taking high-risk action.
+            </Text>
+          </View>
+        </View>
+
+        {/* Human Review Inspection Flag */}
+        {(ticket.flagged_for_human_review || visualAnalysis?.flagged_for_human_review) && (
+          <View style={styles.humanReviewBanner}>
+            <Text style={styles.humanReviewIcon}>🔍</Text>
+            <View style={styles.humanReviewTextWrap}>
+              <Text style={styles.humanReviewTitle}>Flagged for Physical Inspection</Text>
+              <Text style={styles.humanReviewSub}>
+                {ticket.review_reason || visualAnalysis?.human_review_reason || 'Visual evidence uncorroborated. Incident remains active for supervisor on-site review.'}
+              </Text>
+            </View>
+          </View>
+        )}
+
         {/* Threat Level Badge */}
         <View style={styles.badgeContainer}>
           <View style={styles.threatBadge}>
@@ -111,6 +135,51 @@ export const TicketResultScreen: React.FC<TicketResultScreenProps> = ({
             <Text style={styles.factValue}>{ticket.risk_score || '0.75'}</Text>
           </View>
         </View>
+
+        {/* Rule-Based Severity Matrix Breakdown */}
+        {ticket.severity_factors && (
+          <View style={styles.card}>
+            <View style={styles.matrixHeaderRow}>
+              <Text style={styles.cardHeader}>Statutory Severity Matrix</Text>
+              <View style={styles.advisoryBadge}>
+                <Text style={styles.advisoryBadgeText}>ADVISORY ONLY</Text>
+              </View>
+            </View>
+            <Text style={styles.matrixSub}>
+              Formula: min(1.0, max(Base, Base × Likelihood × Consequence × Proximity))
+            </Text>
+
+            <View style={styles.matrixGrid}>
+              <View style={styles.matrixCol}>
+                <Text style={styles.matrixLabel}>Hazard Base</Text>
+                <Text style={styles.matrixVal}>{ticket.severity_factors.hazard_base_severity || 0.70}</Text>
+              </View>
+              <View style={styles.matrixCol}>
+                <Text style={styles.matrixLabel}>Likelihood</Text>
+                <Text style={styles.matrixVal}>
+                  {ticket.severity_factors.likelihood?.multiplier ? `×${ticket.severity_factors.likelihood.multiplier}` : '×1.0'}
+                </Text>
+              </View>
+              <View style={styles.matrixCol}>
+                <Text style={styles.matrixLabel}>Consequence</Text>
+                <Text style={styles.matrixVal}>
+                  {ticket.severity_factors.consequence?.multiplier ? `×${ticket.severity_factors.consequence.multiplier}` : '×1.0'}
+                </Text>
+              </View>
+              <View style={styles.matrixCol}>
+                <Text style={styles.matrixLabel}>Proximity</Text>
+                <Text style={styles.matrixVal}>
+                  {ticket.severity_factors.asset_proximity?.multiplier ? `×${ticket.severity_factors.asset_proximity.multiplier}` : '×1.0'}
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.finalScoreRow}>
+              <Text style={styles.finalScoreLabel}>Final Auditable Severity Score:</Text>
+              <Text style={styles.finalScoreVal}>{ticket.risk_score || ticket.severity_factors.calculated_risk_score || '0.75'}</Text>
+            </View>
+          </View>
+        )}
 
         {/* Attached Photo Proof */}
         {fullPhotoUrl && (
@@ -395,5 +464,130 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     borderTopWidth: 1,
     borderTopColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  aiNoticeBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#451a03',
+    borderWidth: 1.5,
+    borderColor: '#f59e0b',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+  },
+  aiNoticeIcon: {
+    fontSize: 22,
+    marginRight: 10,
+  },
+  aiNoticeTextWrap: {
+    flex: 1,
+  },
+  aiNoticeTitle: {
+    color: '#fef3c7',
+    fontSize: 13,
+    fontWeight: '800',
+    marginBottom: 2,
+  },
+  aiNoticeSub: {
+    color: '#fde68a',
+    fontSize: 11,
+    lineHeight: 15,
+  },
+  humanReviewBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1e1b4b',
+    borderWidth: 1.5,
+    borderColor: '#818cf8',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+  },
+  humanReviewIcon: {
+    fontSize: 22,
+    marginRight: 10,
+  },
+  humanReviewTextWrap: {
+    flex: 1,
+  },
+  humanReviewTitle: {
+    color: '#e0e7ff',
+    fontSize: 13,
+    fontWeight: '800',
+    marginBottom: 2,
+  },
+  humanReviewSub: {
+    color: '#c7d2fe',
+    fontSize: 11,
+    lineHeight: 15,
+  },
+  matrixHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  advisoryBadge: {
+    backgroundColor: '#3b0764',
+    borderWidth: 1,
+    borderColor: '#c084fc',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  advisoryBadgeText: {
+    color: '#e9d5ff',
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  matrixSub: {
+    color: '#94a3b8',
+    fontSize: 11,
+    fontStyle: 'italic',
+    marginBottom: 12,
+  },
+  matrixGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    backgroundColor: '#0f172a',
+    padding: 10,
+    borderRadius: 8,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  matrixCol: {
+    alignItems: 'center',
+  },
+  matrixLabel: {
+    color: '#64748b',
+    fontSize: 10,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    marginBottom: 4,
+  },
+  matrixVal: {
+    color: '#38bdf8',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  finalScoreRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#334155',
+  },
+  finalScoreLabel: {
+    color: '#cbd5e1',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  finalScoreVal: {
+    color: '#f43f5e',
+    fontSize: 16,
+    fontWeight: '900',
   },
 });

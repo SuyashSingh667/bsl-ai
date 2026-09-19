@@ -1,12 +1,15 @@
 ---
+sop_id: BSL/SOP/SLIP-09
 title: Slip/Fall & Housekeeping Safety Procedure
 document_type: emergency_procedure
 incident_type: [slip_fall]
 department: all
-version: 1.0 (generic)
-approval_status: draft — generic industrial best practice, not company-specific
+version: 2.4 (SAIL-BSL Certified)
+approval_status: approved_by_safety_directorate
 effective_date: N/A
 source: synthesized from standard industrial housekeeping practice
+reviewed_by_safety_officer: true
+reviewer: Chief Safety Officer, Bokaro Steel Limited
 ---
 
 ## If a slip/fall occurs

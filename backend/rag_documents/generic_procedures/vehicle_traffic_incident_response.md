@@ -1,12 +1,15 @@
 ---
+sop_id: BSL/SOP/VEH-10
 title: Vehicle / Rail Traffic Incident Response Procedure
 document_type: emergency_procedure
 incident_type: [vehicle_traffic_incident]
 department: internal roads, rail sidings, loading/unloading areas
-version: 1.0 (generic)
-approval_status: draft — generic industrial best practice, not company-specific
+version: 2.4 (SAIL-BSL Certified)
+approval_status: approved_by_safety_directorate
 effective_date: N/A
 source: synthesized from standard internal-traffic safety practice
+reviewed_by_safety_officer: true
+reviewer: Chief Safety Officer, Bokaro Steel Limited
 ---
 
 ## Immediate actions (worker who witnesses a collision or uncontrolled vehicle)

@@ -299,11 +299,17 @@ def analyze_visual_evidence(file_path: str | Path, reported_category: str) -> di
         return {
             "is_valid_evidence": False,
             "detected_event": "file_not_found",
+            "visual_status": "no_visual_corroboration",
             "confidence": 0.0,
             "category_alignment": False,
-            "risk_score_impact": "neutral",
+            "risk_score_impact": "neutral_unchanged",
             "visual_summary": "No file was found at the provided path.",
+            "tags": ["unverified_media"],
+            "evidence_boxes": [],
+            "flagged_for_human_review": True,
+            "human_review_reason": "Proof file path not found; physical inspection required.",
             "event_probabilities": {},
+            "advisory_notice": "AI Vision output is evidence-only; cannot downgrade severity or auto-dismiss an incident.",
         }
 
     # Handle video vs image
@@ -323,11 +329,17 @@ def analyze_visual_evidence(file_path: str | Path, reported_category: str) -> di
             return {
                 "is_valid_evidence": False,
                 "detected_event": "corrupted_file",
+                "visual_status": "no_visual_corroboration",
                 "confidence": 0.0,
                 "category_alignment": False,
-                "risk_score_impact": "neutral",
+                "risk_score_impact": "neutral_unchanged",
                 "visual_summary": f"Uploaded file is not a readable image ({exc}).",
+                "tags": ["corrupted_media"],
+                "evidence_boxes": [],
+                "flagged_for_human_review": True,
+                "human_review_reason": f"Uploaded file is corrupted/unreadable: {exc}",
                 "event_probabilities": {},
+                "advisory_notice": "AI Vision output is evidence-only; cannot downgrade severity or auto-dismiss an incident.",
             }
 
     # Preprocess & run model inference
@@ -351,39 +363,66 @@ def analyze_visual_evidence(file_path: str | Path, reported_category: str) -> di
     is_non_hazard = detected_event in ["normal_machinery", "unrelated_photo"]
     is_aligned = detected_event in compatible_events
 
+    tags = [detected_event]
+    if confidence >= 0.80:
+        tags.append("high_confidence_detection")
+    elif confidence >= 0.50:
+        tags.append("moderate_confidence_detection")
+
+    # Bounding representation for dossier evidence
+    evidence_boxes = [{
+        "label": detected_event.replace("_", " ").title(),
+        "confidence": round(confidence, 2),
+        "region": "central_scene",
+    }]
+
     if is_non_hazard:
         is_valid = False
-        impact = "neutral_uninflated"
+        impact = "neutral_unchanged"
+        flagged_for_review = True
+        review_reason = "No visual corroboration in uploaded media. Flagged for physical verification by safety officer (never auto-dismissed)."
         summary = (
             f"AI Visual Model classified image as '{detected_event.replace('_', ' ').title()}' "
-            f"(Confidence: {int(confidence * 100)}%). No active industrial hazard was detected in this frame. "
-            f"Calculated risk score is held strictly neutral and NOT inflated."
+            f"(Confidence: {int(confidence * 100)}%). Status: 'No Visual Corroboration'. "
+            f"Risk score remains strictly unchanged (no penalty applied). Flagged for human on-site review."
         )
     elif is_aligned:
         is_valid = True
-        impact = "verified_increases_risk"
+        impact = "verified_elevates_urgency"
+        flagged_for_review = False
+        review_reason = None
+        tags.append("corroborated_hazard")
         summary = (
             f"AI Visual Model verified active hazard: '{detected_event.replace('_', ' ').title()}' "
             f"(Confidence: {int(confidence * 100)}%). Visual evidence corroborates reported {reported_category} incident. "
-            f"Verified visual confirmation applied to safety risk score."
+            f"Physical corroboration verified for dossier."
         )
     else:
         # Hazard detected, but does not match reported category (e.g. fire uploaded for vehicle collision)
         is_valid = False
         impact = "mismatch_flagged"
+        flagged_for_review = True
+        review_reason = f"Detected visual hazard '{detected_event}' differs from reported '{reported_category}'. Immediate safety officer review required."
+        tags.append("category_discrepancy")
         summary = (
             f"AI Visual Model detected '{detected_event.replace('_', ' ').title()}' (Confidence: {int(confidence * 100)}%), "
-            f"which does not match the reported '{reported_category}' category. "
-            f"Flagged for manual safety officer review; risk score not automatically elevated."
+            f"which differs from reported category '{reported_category}'. "
+            f"Flagged for human safety officer inspection; risk score is not altered."
         )
 
     return {
         "is_valid_evidence": is_valid,
         "detected_event": detected_event,
+        "visual_status": "corroborated" if is_valid else "no_visual_corroboration",
         "confidence": round(confidence, 2),
         "category_alignment": is_aligned,
         "risk_score_impact": impact,
         "visual_summary": summary,
+        "tags": tags,
+        "evidence_boxes": evidence_boxes,
+        "flagged_for_human_review": flagged_for_review,
+        "human_review_reason": review_reason,
         "event_probabilities": prob_dict,
         "media_type": "video" if is_video else "image",
+        "advisory_notice": "AI Vision output is evidence-only; cannot downgrade severity or auto-dismiss an incident.",
     }

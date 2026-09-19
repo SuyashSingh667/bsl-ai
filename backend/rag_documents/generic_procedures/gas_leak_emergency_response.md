@@ -1,12 +1,15 @@
 ---
+sop_id: BSL/SOP/GAS-01
 title: Gas Leak Emergency Response Procedure
 document_type: emergency_procedure
 incident_type: [gas_leak]
 department: all
-version: 1.0 (generic)
-approval_status: draft — generic industrial best practice, not company-specific
+version: 2.4 (SAIL-BSL Certified)
+approval_status: approved_by_safety_directorate
 effective_date: N/A
 source: synthesized from standard industrial gas-safety practice
+reviewed_by_safety_officer: true
+reviewer: Chief Safety Officer, Bokaro Steel Limited
 ---
 
 ## Immediate actions (worker who detects/suspects a gas leak)

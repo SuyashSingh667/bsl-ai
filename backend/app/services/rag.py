@@ -42,6 +42,10 @@ class Chunk:
     incident_types: list[str]
     section: str
     text: str
+    sop_id: str = "BSL/SOP/GEN-00"
+    version: str = "1.0"
+    reviewed_by_safety_officer: bool = False
+    reviewer: str = ""
     embedding: np.ndarray | None = field(default=None, repr=False)
 
 
@@ -63,6 +67,10 @@ def _parse_frontmatter(text: str) -> tuple[dict, str]:
         key, value = key.strip(), value.strip()
         if value.startswith("[") and value.endswith("]"):
             meta[key] = [v.strip() for v in value[1:-1].split(",") if v.strip()]
+        elif value.lower() in ("true", "yes"):
+            meta[key] = True
+        elif value.lower() in ("false", "no"):
+            meta[key] = False
         else:
             meta[key] = value
     return meta, body
@@ -95,6 +103,21 @@ def build_index() -> None:
         except Exception:
             continue
         meta, body = _parse_frontmatter(text)
+        is_reviewed = meta.get("reviewed_by_safety_officer", False)
+        if isinstance(is_reviewed, str):
+            is_reviewed = is_reviewed.lower() in ("true", "1", "yes")
+
+        sop_id = str(meta.get("sop_id", "BSL/SOP/GEN-00"))
+        version = str(meta.get("version", "1.0"))
+        reviewer = str(meta.get("reviewer", ""))
+
+        if not is_reviewed:
+            logger.warning(
+                f"[SOP Governance] BLOCKED unreviewed procedure {md_path.name} (SOP ID: {sop_id}). "
+                "Unreviewed SOPs are strictly blocked from the operational RAG index."
+            )
+            continue
+
         incident_types = meta.get("incident_type", [])
         title = meta.get("title", md_path.stem)
         for section_header, section_text in _split_sections(body):
@@ -105,6 +128,10 @@ def build_index() -> None:
                     incident_types=incident_types,
                     section=section_header,
                     text=section_text,
+                    sop_id=sop_id,
+                    version=version,
+                    reviewed_by_safety_officer=is_reviewed,
+                    reviewer=reviewer,
                 )
             )
 
@@ -112,7 +139,7 @@ def build_index() -> None:
         _chunks, _embeddings = [], None
         return
 
-    texts = [f"{c.doc_title} — {c.section}\n{c.text}" for c in chunks]
+    texts = [f"{c.sop_id} {c.doc_title} — {c.section}\n{c.text}" for c in chunks]
     _chunks = chunks
     _embeddings = embeddings.encode(texts)
 
@@ -181,8 +208,14 @@ def retrieve(query: str, incident_type: str | None = None, top_k: int = 3) -> li
     results = []
     for idx, score in ranked:
         c = _chunks[idx]
+        if not c.reviewed_by_safety_officer:
+            continue
         results.append(
             {
+                "sop_id": c.sop_id,
+                "version": c.version,
+                "reviewed_by_safety_officer": c.reviewed_by_safety_officer,
+                "reviewer": c.reviewer,
                 "doc_title": c.doc_title,
                 "doc_path": c.doc_path,
                 "section": c.section,
@@ -205,16 +238,26 @@ def generate_guidance(category: str | None, query: str) -> tuple[str, list[dict]
     chunks = retrieve(query, incident_type=category, top_k=3)
     if not chunks:
         return (
-            "No approved procedure was found for this incident type in the current "
-            "knowledge base. Do not treat this as an absence of risk — escalate to the "
-            "designated safety authority for manual guidance.",
+            "No approved, safety-officer-reviewed procedure was found for this incident type in the current "
+            "knowledge base. [SOP GAP DETECTED] Universal fallback: Move away from the hazard area immediately, "
+            "alert your area supervisor, and wait for the emergency team at the assembly point.",
             [],
         )
 
     lines = [f"Guidance for a reported {category.replace('_', ' ')} incident, grounded in approved procedure:\n"]
     for c in chunks:
         first_lines = "\n".join(c["text"].splitlines()[:6])
-        lines.append(f"**{c['section']}** (from {c['doc_title']}):\n{first_lines}\n")
+        lines.append(f"[{c['sop_id']}: Section {c['section']}] (from {c['doc_title']} v{c['version']}):\n{first_lines}\n")
 
-    sources = [{"title": c["doc_title"], "section": c["section"], "path": c["doc_path"]} for c in chunks]
+    sources = [
+        {
+            "sop_id": c["sop_id"],
+            "title": c["doc_title"],
+            "section": c["section"],
+            "path": c["doc_path"],
+            "version": c["version"],
+            "reviewed_by_safety_officer": c["reviewed_by_safety_officer"],
+        }
+        for c in chunks
+    ]
     return "\n".join(lines), sources

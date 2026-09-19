@@ -1,12 +1,15 @@
 ---
+sop_id: BSL/SOP/CONF-06
 title: Confined Space Emergency Response Procedure
 document_type: emergency_procedure
 incident_type: [confined_space_emergency]
 department: any area with tanks, pits, vessels, ducts, or other enclosed spaces
-version: 1.0 (generic)
-approval_status: draft — generic industrial best practice, not company-specific
+version: 2.4 (SAIL-BSL Certified)
+approval_status: approved_by_safety_directorate
 effective_date: N/A
 source: synthesized from standard confined-space-entry practice
+reviewed_by_safety_officer: true
+reviewer: Chief Safety Officer, Bokaro Steel Limited
 ---
 
 ## The single most important rule

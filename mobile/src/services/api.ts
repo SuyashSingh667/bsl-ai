@@ -27,11 +27,23 @@ export interface Ticket {
   guidance_text_native?: string;
   guidance_audio_path?: string;
   precautionary_measures?: any;
+  flagged_for_human_review?: boolean;
+  review_reason?: string;
+  sop_gap_detected?: boolean;
+  severity_factors?: any;
+  ai_audit_trail?: any;
   visual_analysis?: {
     detected_event: string;
     confidence: number;
     is_valid_evidence: boolean;
     visual_summary: string;
+    visual_status?: string;
+    risk_score_impact?: string;
+    flagged_for_human_review?: boolean;
+    human_review_reason?: string;
+    tags?: string[];
+    evidence_boxes?: any[];
+    advisory_notice?: string;
     probabilities?: Record<string, number>;
   };
   status?: string;

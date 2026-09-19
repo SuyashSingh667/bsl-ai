@@ -10,6 +10,7 @@ from app.services import (
     precautionary_measures,
     report_generator,
     routing,
+    safety_rules,
     spatial_impact,
     translation,
     tts,
@@ -219,10 +220,33 @@ def _finalize(ticket: Ticket) -> None:
     if impact:
         ticket.impact_assessment = impact
 
-    # 4. Transparent Risk Scoring & Escalation Routing
-    risk_score = routing.compute_risk_score(ticket.predicted_category, score, impact)
-    ticket.risk_score = risk_score
-    ticket.routing_tier = routing.route(ticket.report_type, risk_score, impact)
+    # 4. Transparent Rule-Based Severity Matrix & Central Escalate-Only Routing
+    calc_score, matrix_data = routing.compute_severity_with_factors(
+        category=ticket.predicted_category,
+        observation_mode=findings.get("observation_mode"),
+        is_hazard_active=findings.get("is_hazard_active"),
+        people_exposed_count=findings.get("people_exposed_count"),
+        has_casualties=bool(findings.get("reported_symptoms")),
+        zone_id=ticket.zone_id,
+        impact=impact,
+        ml_confidence=ticket.category_confidence,
+    )
+    ticket.severity_factors = matrix_data
+    proposed_tier = routing.route(ticket.report_type, calc_score, impact)
+
+    # Invariant: Human report primacy & monotonic severity floor (no AI may downgrade)
+    inv_result = safety_rules.apply_safety_invariants(
+        human_report_type=ticket.report_type,
+        current_tier=ticket.routing_tier,
+        current_risk_score=ticket.risk_score,
+        proposed_tier=proposed_tier,
+        proposed_risk_score=calc_score,
+        has_dispatched=bool(ticket.status in ["in_progress", "resolved"]),
+        is_acute_emergency=(ticket.report_type == "emergency"),
+    )
+    risk_score = inv_result["risk_score"]
+    ticket.risk_score = inv_result["risk_score"]
+    ticket.routing_tier = inv_result["routing_tier"]
     ticket.status = "in_progress"
 
     photo_url = None

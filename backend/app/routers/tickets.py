@@ -10,7 +10,7 @@ from app.config import PHOTO_UPLOAD_DIR
 from app.database import get_db
 from app.models import Ticket
 from app.schemas import TicketOut, TicketUpdate
-from app.services import visual_analysis, routing
+from app.services import routing, safety_rules, visual_analysis
 
 router = APIRouter(prefix="/tickets", tags=["tickets"])
 
@@ -74,9 +74,30 @@ def upload_photo(
     ticket.photo_url = photo_url
     ticket.media_url = photo_url
 
-    # Run AI Visual Hazard Analysis
+    # 2. Run AI Visual Hazard Analysis on the uploaded evidence
     v_analysis = visual_analysis.analyze_visual_evidence(str(dest), ticket.predicted_category or "fire")
     ticket.visual_analysis = v_analysis
+
+    if v_analysis.get("flagged_for_human_review"):
+        ticket.flagged_for_human_review = True
+        ticket.review_reason = v_analysis.get("human_review_reason")
+
+    # Invariant: Evidence-only vision may elevate urgency, but never lowers score or dismisses
+    proposed_risk = ticket.risk_score
+    if v_analysis.get("is_valid_evidence"):
+        proposed_risk = min(1.0, round((ticket.risk_score or 0.5) + 0.10, 2))
+
+    has_active_dispatch = bool(ticket.safety_report and ticket.safety_report.get("recipients"))
+    safety_check = safety_rules.apply_safety_invariants(
+        human_report_type=ticket.report_type,
+        current_tier=ticket.routing_tier,
+        current_risk_score=ticket.risk_score,
+        proposed_tier=ticket.routing_tier,
+        proposed_risk_score=proposed_risk,
+        has_dispatched=has_active_dispatch,
+    )
+    ticket.risk_score = safety_check["risk_score"]
+    ticket.routing_tier = safety_check["routing_tier"]
 
     # If safety report was already synthesized, update report with photo and AI analysis
     if ticket.safety_report:
@@ -85,19 +106,15 @@ def upload_photo(
         rep["media_url"] = photo_url
         rep["media_type"] = media_type
         rep["visual_analysis"] = v_analysis
+        rep["risk_score"] = ticket.risk_score
 
-        # Check if visual evidence confirmed hazard or is inconclusive
+        # Check if visual evidence confirmed hazard or is uncorroborated
         if "verified_summary" in rep:
             v_sum = dict(rep["verified_summary"])
             if v_analysis.get("is_valid_evidence"):
                 v_sum["observation_mode"] = f"Confirmed by AI Vision ({v_analysis['detected_event'].replace('_', ' ').title()} - {int(v_analysis['confidence']*100)}%)"
-                # Elevate risk score based on verified visual proof
-                if ticket.verification_score is not None:
-                    ticket.verification_score = max(ticket.verification_score, round(0.75 + 0.15 * v_analysis.get("confidence", 0.8), 2))
-                    ticket.risk_score = routing.compute_risk_score(ticket.predicted_category, ticket.verification_score, ticket.impact_assessment)
-                    rep["risk_score"] = ticket.risk_score
             else:
-                v_sum["observation_mode"] = f"Inconclusive ({v_analysis['detected_event'].replace('_', ' ').title()} - Risk Score Held Neutral)"
+                v_sum["observation_mode"] = f"No Visual Corroboration ({v_analysis['detected_event'].replace('_', ' ').title()} - Flagged for Safety Officer Review)"
             rep["verified_summary"] = v_sum
 
         md = rep.get("report_markdown", "")
@@ -111,12 +128,15 @@ def upload_photo(
                 f"![Incident Scene Photographic Proof]({photo_url})\n"
                 f"*Photographic evidence captured on site for Zone {ticket.zone_id or 'Plant Facility'}.*\n"
             )
+            tags_str = ", ".join(f"`{t}`" for t in v_analysis.get("tags", []))
             ai_sec = (
-                f"\n## 🤖 AI Visual Hazard Analysis\n"
+                f"\n## 🤖 AI Visual Hazard Analysis (Advisory Evidence)\n"
                 f"- **Detected Visual Event:** `{v_analysis['detected_event'].replace('_', ' ').title()}`\n"
                 f"- **Model Confidence:** `{int(v_analysis['confidence'] * 100)}%`\n"
-                f"- **Hazard Corroboration:** `{'CORROBORATED / VERIFIED' if v_analysis['is_valid_evidence'] else 'INCONCLUSIVE / UNCORRELATED'}`\n"
-                f"- **Calculated Risk Score Impact:** `{'Risk elevated based on verified visual evidence' if v_analysis['is_valid_evidence'] else 'Held neutral (NOT inflated to prevent false alarms)'}`\n"
+                f"- **Visual Status:** `{'PHYSICALLY CORROBORATED' if v_analysis['is_valid_evidence'] else 'NO VISUAL CORROBORATION'}`\n"
+                f"- **Evidence Tags:** {tags_str}\n"
+                f"- **Human Review Flag:** `{'FLAGGED FOR SAFETY OFFICER REVIEW' if v_analysis.get('flagged_for_human_review') else 'CORROBORATED'}`\n"
+                f"- **Calculated Risk Score Impact:** `{'Elevated by visual proof' if v_analysis['is_valid_evidence'] else 'Held strictly neutral (never lowered)'}`\n"
                 f"- **Detailed Assessment:** *{v_analysis['visual_summary']}*\n"
             )
             rep["report_markdown"] = f"{md}\n{media_sec}\n{ai_sec}"

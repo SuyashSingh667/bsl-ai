@@ -9,7 +9,9 @@ Urdu is strictly excluded.
 from __future__ import annotations
 
 import logging
+import os
 import re
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -121,6 +123,164 @@ DEFAULT_SOP_SOURCE = {
     "file": "evacuation_assembly_point.md",
 }
 
+CATEGORY_SOP_SECTIONS: dict[str, dict[str, str]] = {
+    "gas_leak": {
+        "evacuate": "Immediate actions (worker who detects/suspects a gas leak)",
+        "life_safety_ppe": "Symptoms indicating exposure requiring immediate medical attention",
+        "donts": "Immediate actions (worker who detects/suspects a gas leak)",
+        "emergency_contacts": "For the responding team / gas services",
+    },
+    "fire": {
+        "evacuate": "Immediate actions (worker who discovers a fire)",
+        "life_safety_ppe": "Extinguisher class reference",
+        "donts": "Immediate actions (worker who discovers a fire)",
+        "emergency_contacts": "For designated fire wardens / response team",
+    },
+    "electrical_hazard": {
+        "evacuate": "If you witness an electrical incident (shock, arc flash, exposed live wiring)",
+        "life_safety_ppe": "Lockout-Tagout (LOTO) procedure for maintenance/repair work",
+        "donts": "General electrical safety rules",
+        "emergency_contacts": "If you witness an electrical incident (shock, arc flash, exposed live wiring)",
+    },
+    "electrical": {
+        "evacuate": "If you witness an electrical incident (shock, arc flash, exposed live wiring)",
+        "life_safety_ppe": "Lockout-Tagout (LOTO) procedure for maintenance/repair work",
+        "donts": "General electrical safety rules",
+        "emergency_contacts": "If you witness an electrical incident (shock, arc flash, exposed live wiring)",
+    },
+    "molten_metal_spill": {
+        "evacuate": "Immediate actions (worker who witnesses a spill)",
+        "life_safety_ppe": "Why this is not \"just a fire\"",
+        "donts": "Why this is not \"just a fire\"",
+        "emergency_contacts": "For the response team",
+    },
+    "molten_metal": {
+        "evacuate": "Immediate actions (worker who witnesses a spill)",
+        "life_safety_ppe": "Why this is not \"just a fire\"",
+        "donts": "Why this is not \"just a fire\"",
+        "emergency_contacts": "For the response team",
+    },
+    "chemical_spill": {
+        "evacuate": "Immediate actions (worker who witnesses a spill)",
+        "life_safety_ppe": "If skin or eye contact has occurred",
+        "donts": "Immediate actions (worker who witnesses a spill)",
+        "emergency_contacts": "For the response team",
+    },
+    "confined_space_emergency": {
+        "evacuate": "The single most important rule",
+        "life_safety_ppe": "Before entry by rescue personnel",
+        "donts": "The single most important rule",
+        "emergency_contacts": "Before entry by rescue personnel",
+    },
+    "confined_space": {
+        "evacuate": "The single most important rule",
+        "life_safety_ppe": "Before entry by rescue personnel",
+        "donts": "The single most important rule",
+        "emergency_contacts": "Before entry by rescue personnel",
+    },
+    "crane_lifting_failure": {
+        "evacuate": "Immediate actions (worker who witnesses a lifting failure — dropped load, uncontrolled swing, visible equipment damage)",
+        "life_safety_ppe": "For the crane operator / response team",
+        "donts": "Immediate actions (worker who witnesses a lifting failure — dropped load, uncontrolled swing, visible equipment damage)",
+        "emergency_contacts": "For the crane operator / response team",
+    },
+    "crane_rigging": {
+        "evacuate": "Immediate actions (worker who witnesses a lifting failure — dropped load, uncontrolled swing, visible equipment damage)",
+        "life_safety_ppe": "For the crane operator / response team",
+        "donts": "Immediate actions (worker who witnesses a lifting failure — dropped load, uncontrolled swing, visible equipment damage)",
+        "emergency_contacts": "For the crane operator / response team",
+    },
+    "mechanical_failure": {
+        "evacuate": "If mechanical equipment fails or behaves unexpectedly",
+        "life_safety_ppe": "Permit-to-Work — required before entering or working on isolated equipment",
+        "donts": "General mechanical safety rules",
+        "emergency_contacts": "If mechanical equipment fails or behaves unexpectedly",
+    },
+    "conveyor": {
+        "evacuate": "If mechanical equipment fails or behaves unexpectedly",
+        "life_safety_ppe": "Permit-to-Work — required before entering or working on isolated equipment",
+        "donts": "General mechanical safety rules",
+        "emergency_contacts": "If mechanical equipment fails or behaves unexpectedly",
+    },
+    "slip_fall": {
+        "evacuate": "If a slip/fall occurs",
+        "life_safety_ppe": "Routine housekeeping requirements",
+        "donts": "If a slip/fall occurs",
+        "emergency_contacts": "If a slip/fall occurs",
+    },
+    "vehicle_traffic_incident": {
+        "evacuate": "Immediate actions (worker who witnesses a collision or uncontrolled vehicle)",
+        "life_safety_ppe": "Immediate actions (worker who witnesses a collision or uncontrolled vehicle)",
+        "donts": "Immediate actions (worker who witnesses a collision or uncontrolled vehicle)",
+        "emergency_contacts": "For the response team",
+    },
+    "ppe_violation": {
+        "evacuate": "If a worker is found without required PPE",
+        "life_safety_ppe": "Baseline PPE (any general plant-floor area)",
+        "donts": "If a worker is found without required PPE",
+        "emergency_contacts": "If a worker is found without required PPE",
+    },
+}
+
+DEFAULT_FALLBACK_MEASURES = [
+    {
+        "id": "evacuate",
+        "icon": "🏃",
+        "sop_id": "BSL/SOP/GEN-00",
+        "sop_section": "When to evacuate",
+        "sop_version": "2.4",
+        "citation": "[BSL/SOP/GEN-00: Section When to evacuate]",
+        "title": "Immediate Evacuation (Universal Safe Protocol)",
+        "title_native": "तत्काल सुरक्षित निकासी (सार्वभौमिक सुरक्षा नियम)",
+        "text": "[BSL/SOP/GEN-00: Section When to evacuate] Move away from the hazard area immediately. Do not attempt unapproved actions or delay evacuation.",
+        "text_native": "[BSL/SOP/GEN-00: Section When to evacuate] खतरे के क्षेत्र से तुरंत दूर हटें। किसी भी अप्रमाणित कार्य का प्रयास न करें।",
+        "checklist_label": "[BSL/SOP/GEN-00] Evacuated immediately away from hazard zone",
+        "checklist_label_native": "[BSL/SOP/GEN-00] खतरे वाले क्षेत्र से तत्काल सुरक्षित बाहर निकले",
+    },
+    {
+        "id": "life_safety_ppe",
+        "icon": "🛡️",
+        "sop_id": "BSL/SOP/GEN-00",
+        "sop_section": "At the assembly point",
+        "sop_version": "2.4",
+        "citation": "[BSL/SOP/GEN-00: Section At the assembly point]",
+        "title": "Assembly Point Reporting & Headcount",
+        "title_native": "असेंबली पॉइंट रिपोर्टिंग एवं उपस्थिति सत्यापन",
+        "text": "[BSL/SOP/GEN-00: Section At the assembly point] Report directly to designated plant assembly point. Remain in safe zone until supervisor headcount is completed.",
+        "text_native": "[BSL/SOP/GEN-00: Section At the assembly point] निर्दिष्ट प्लांट असेंबली पॉइंट पर रिपोर्ट करें और हेडकाउंट पूरा होने तक सुरक्षित रहें।",
+        "checklist_label": "[BSL/SOP/GEN-00] Reported to designated assembly point for headcount",
+        "checklist_label_native": "[BSL/SOP/GEN-00] असेंबली पॉइंट पर रिपोर्ट कर हेडकाउंट में शामिल हुए",
+    },
+    {
+        "id": "donts",
+        "icon": "⛔",
+        "sop_id": "BSL/SOP/GEN-00",
+        "sop_section": "Re-entry",
+        "sop_version": "2.4",
+        "citation": "[BSL/SOP/GEN-00: Section Re-entry]",
+        "title": "Strict Re-Entry Prohibition",
+        "title_native": "पुनः प्रवेश पर पूर्ण प्रतिबंध",
+        "text": "[BSL/SOP/GEN-00: Section Re-entry] STRICTLY PROHIBITED: Do not re-enter the affected plant area under any circumstances until certified safe by safety authorities.",
+        "text_native": "[BSL/SOP/GEN-00: Section Re-entry] सख्त मनाही: सुरक्षा अधिकारियों द्वारा सुरक्षित घोषित किए जाने तक किसी भी हालत में दोबारा अंदर न जाएं।",
+        "checklist_label": "[BSL/SOP/GEN-00] Prohibited uncertified re-entry into affected area",
+        "checklist_label_native": "[BSL/SOP/GEN-00] प्रभावित क्षेत्र में अनधिकृत पुनः प्रवेश पर रोक सुनिश्चित की",
+    },
+    {
+        "id": "emergency_contacts",
+        "icon": "📞",
+        "sop_id": "BSL/SOP/GEN-00",
+        "sop_section": "Zone-specific consideration for this platform",
+        "sop_version": "2.4",
+        "citation": "[BSL/SOP/GEN-00: Section Zone-specific consideration for this platform]",
+        "title": "Emergency Dispatch & Supervisor Alert",
+        "title_native": "आपातकालीन दस्ता एवं सुपरवाइजर अलर्ट",
+        "text": "[BSL/SOP/GEN-00: Section Zone-specific consideration for this platform] Alert area supervisor and plant control room immediately. Emergency response team dispatched.",
+        "text_native": "[BSL/SOP/GEN-00: Section Zone-specific consideration for this platform] तत्काल एरिया सुपरवाइजर व कंट्रोल रूम को सूचित करें। आपातकालीन दस्ता रवाना किया गया।",
+        "checklist_label": "[BSL/SOP/GEN-00] Alerted area supervisor and confirmed emergency dispatch",
+        "checklist_label_native": "[BSL/SOP/GEN-00] सुपरवाइजर को सूचित कर इमरजेंसी टीम को पुष्टि दी",
+    },
+]
+
 LOCALIZED_MEASURE_TITLES: dict[str, dict[str, str]] = {
     "evacuate": {
         "en": "Immediate Evacuation & Cordon Protocol",
@@ -189,7 +349,7 @@ def normalize_category(category: str) -> str:
         return "molten_metal_spill"
     if "chem" in cat or "acid" in cat or "toxic" in cat:
         return "chemical_spill"
-    if "confined" in cat or "space" in cat or "tank interior" in cat or "manhole" in cat:
+    if "confined" in cat or "confined_space" in cat or "tank interior" in cat or "manhole" in cat:
         return "confined_space_emergency"
     if "crane" in cat or "lift" in cat or "rigging" in cat or "hoist" in cat:
         return "crane_lifting_failure"
@@ -949,34 +1109,50 @@ def build_situation_measures(
         ("emergency_contacts", "📞", cmd_en, cmd_hi, chk_cmd_en, chk_cmd_hi),
     ]
 
+    sop_info = CATEGORY_SOP_SOURCES.get(cat_key, DEFAULT_SOP_SOURCE)
+    sop_code = sop_info.get("code", "BSL/SOP/GEN-00")
+    sec_map = CATEGORY_SOP_SECTIONS.get(cat_key, {})
+
     items = []
     for m_id, icon, t_en, t_hi, c_en, c_hi in raw_triplets:
         title_en = LOCALIZED_MEASURE_TITLES.get(m_id, {}).get("en", m_id.title())
         title_nat = LOCALIZED_MEASURE_TITLES.get(m_id, {}).get(lang, title_en)
+        sec_name = sec_map.get(m_id, "Immediate actions")
+        citation = f"[{sop_code}: Section {sec_name}]"
+        chk_citation = f"[{sop_code}]"
+
+        cited_t_en = f"{citation} {t_en}"
+        cited_t_hi = f"{citation} {t_hi}"
+        cited_c_en = f"{chk_citation} {c_en}"
+        cited_c_hi = f"{chk_citation} {c_hi}"
 
         if lang == "en":
-            text_nat = t_en
-            chk_nat = c_en
+            text_nat = cited_t_en
+            chk_nat = cited_c_en
         elif lang == "hi":
-            text_nat = t_hi
-            chk_nat = c_hi
+            text_nat = cited_t_hi
+            chk_nat = cited_c_hi
         elif lang == "bn":
-            text_nat = translation.from_english(t_en, "bn") or t_en
-            chk_nat = translation.from_english(c_en, "bn") or c_en
+            text_nat = translation.from_english(cited_t_en, "bn") or cited_t_en
+            chk_nat = translation.from_english(cited_c_en, "bn") or cited_c_en
         else:
-            trans_t = translation.from_english(t_en, lang)
-            text_nat = trans_t if trans_t and trans_t != t_en else t_hi
-            trans_c = translation.from_english(c_en, lang)
-            chk_nat = trans_c if trans_c and trans_c != c_en else c_hi
+            trans_t = translation.from_english(cited_t_en, lang)
+            text_nat = trans_t if trans_t and trans_t != cited_t_en else cited_t_hi
+            trans_c = translation.from_english(cited_c_en, lang)
+            chk_nat = trans_c if trans_c and trans_c != cited_c_en else cited_c_hi
 
         items.append({
             "id": m_id,
             "icon": icon,
+            "sop_id": sop_code,
+            "sop_section": sec_name,
+            "sop_version": "2.4",
+            "citation": citation,
             "title": title_en,
             "title_native": title_nat,
-            "text": t_en,
+            "text": cited_t_en,
             "text_native": text_nat,
-            "checklist_label": c_en,
+            "checklist_label": cited_c_en,
             "checklist_label_native": chk_nat,
         })
 
@@ -1001,41 +1177,93 @@ def build_situation_measures(
 def generate_precautionary_measures(ticket: Ticket) -> dict[str, Any]:
     """
     Main entry point for generating precautionary measures for an incident ticket.
-    Conditions dynamically on ticket category, verified findings, situation facts, zone, and language.
-    Returns prompt question, audio URL, spoken summary, and 4 grounded checklist measures.
+    Retrieve-and-quote only from reviewed safety procedures.
+    Enforces zero-hallucinated steps, strict [SOP_ID: Section X] citations,
+    safe universal fallback on unreviewed/missing SOP gap, and auditable dossier trail.
     """
     category = ticket.predicted_category or "gas_leak"
     lang = ticket.language or "en"
     normalized_cat = normalize_category(category)
-    sop_info = CATEGORY_SOP_SOURCES.get(normalized_cat, DEFAULT_SOP_SOURCE)
 
-    # 1. Extract dynamic situational facts from incident description and verification answers
+    # 1. Retrieve reviewed chunks from Deep RAG
+    search_query = f"{ticket.incident_description or ''} {category}"
+    retrieved_chunks = rag.retrieve(query=search_query, incident_type=normalized_cat, top_k=3)
+    reviewed_chunks = [c for c in retrieved_chunks if c.get("reviewed_by_safety_officer", False)]
+
+    has_reviewed_sop = (normalized_cat in CATEGORY_SOP_SOURCES) and (
+        len(reviewed_chunks) > 0 or len(rag.retrieve("general safety procedure", incident_type=normalized_cat, top_k=1)) > 0
+    )
+
+    # 2. Extract dynamic situational facts
     sit = extract_situation_facts(ticket)
 
-    # 2. Localized Prompt Question
+    # 3. Handle SOP gap or unreviewed procedures
+    if not has_reviewed_sop:
+        ticket.sop_gap_detected = True
+        ticket.flagged_for_human_review = True
+        ticket.review_reason = f"SOP gap detected: No approved, safety-officer-reviewed procedure available for '{category}'."
+        measures = list(DEFAULT_FALLBACK_MEASURES)
+        sop_info = DEFAULT_SOP_SOURCE
+        spoken_en = (
+            "Safety Advisory Notice: No safety-officer-approved procedure matches this reported situation. "
+            "Universal fallback active: Move away immediately, report to your area supervisor, and wait at the assembly point."
+        )
+        spoken_hi = (
+            "सुरक्षा सूचना: इस स्थिति के लिए कोई अनुमोदित सुरक्षा प्रक्रिया उपलब्ध नहीं है। "
+            "सार्वभौमिक सुरक्षा नियम लागू: खतरे से तुरंत दूर हटें, सुपरवाइजर को सूचित करें और असेंबली पॉइंट पर प्रतीक्षा करें।"
+        )
+    else:
+        ticket.sop_gap_detected = False
+        sop_info = CATEGORY_SOP_SOURCES.get(normalized_cat, DEFAULT_SOP_SOURCE)
+        measures, spoken_en, spoken_hi = build_situation_measures(category, sit, lang=lang)
+
+    # 4. Populate immutable AI audit trail on ticket
+    ticket.ai_audit_trail = {
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "prompt": f"Retrieve and quote verified safety SOP for category '{category}' with situation facts: {sit}",
+        "retrieved_passages": [
+            {
+                "sop_id": c.get("sop_id", sop_info["code"]),
+                "section": c.get("section", "Standard Procedure"),
+                "doc_title": c.get("doc_title", sop_info["title"]),
+                "version": c.get("version", "2.4"),
+                "similarity": c.get("similarity", 1.0),
+                "text_snippet": c.get("text", "")[:200],
+            }
+            for c in reviewed_chunks
+        ],
+        "model_versions": {
+            "retrieval_embedding": "sentence-transformers/all-MiniLM-L6-v2",
+            "translation": "Helsinki-NLP/opus-mt-hi-en + dictionary-fallback",
+            "governance": "BSL-Safety-Directorate-v2.4",
+            "vision_model": "HazardVisionNet-v1.0",
+        },
+        "sop_gap_detected": bool(ticket.sop_gap_detected),
+        "reviewed_by_safety_officer": not bool(ticket.sop_gap_detected),
+        "contributing_factors": getattr(ticket, "severity_factors", None),
+        "flagged_for_human_review": bool(ticket.flagged_for_human_review),
+        "review_reason": ticket.review_reason,
+    }
+
+    # 5. Localized Prompt Question & Spoken Audio
     prompt_q = PROMPT_QUESTION_LOCALIZED.get(lang, PROMPT_QUESTION_LOCALIZED["en"])
-
-    # 3. Build the 4 Situation-Conditioned Measures
-    measures, spoken_en, spoken_hi = build_situation_measures(category, sit, lang=lang)
-
-    # 4. Spoken Audio Summary
     spoken_native = spoken_en if lang == "en" else spoken_hi
     if lang not in ["en", "hi"]:
         trans_sp = translation.from_english(spoken_en, lang)
         spoken_native = trans_sp if trans_sp and trans_sp != spoken_en else spoken_hi
 
-    # Synthesize smooth neural audio for prompt question & spoken summary
     q_audio_path = None
     sp_audio_path = None
-    try:
-        q_audio_path = tts.synthesize(prompt_q, lang)
-    except Exception as exc:
-        logger.warning(f"Failed to synthesize prompt question TTS for lang {lang}: {exc}")
+    if os.getenv("SKIP_TTS_EVAL") != "1":
+        try:
+            q_audio_path = tts.synthesize(prompt_q, lang)
+        except Exception as exc:
+            logger.warning(f"Failed to synthesize prompt question TTS for lang {lang}: {exc}")
 
-    try:
-        sp_audio_path = tts.synthesize(spoken_native, lang)
-    except Exception as exc:
-        logger.warning(f"Failed to synthesize precautionary measures spoken summary TTS for lang {lang}: {exc}")
+        try:
+            sp_audio_path = tts.synthesize(spoken_native, lang)
+        except Exception as exc:
+            logger.warning(f"Failed to synthesize precautionary measures spoken summary TTS for lang {lang}: {exc}")
 
     audio_url = f"/audio/{Path(sp_audio_path).name}" if sp_audio_path else None
     q_audio_url = f"/audio/{Path(q_audio_path).name}" if q_audio_path else None
@@ -1044,6 +1272,7 @@ def generate_precautionary_measures(ticket: Ticket) -> dict[str, Any]:
         "category": category,
         "sop_source": sop_info["title"],
         "sop_code": sop_info["code"],
+        "sop_gap_detected": bool(ticket.sop_gap_detected),
         "prompt_question": PROMPT_QUESTION_LOCALIZED["en"],
         "prompt_question_native": prompt_q,
         "spoken_summary_en": spoken_en,
@@ -1053,6 +1282,7 @@ def generate_precautionary_measures(ticket: Ticket) -> dict[str, Any]:
         "spoken_audio_path": audio_url,
         "measures": measures,
         "situation_facts": sit,
+        "ai_audit_trail": ticket.ai_audit_trail,
     }
 
     return result

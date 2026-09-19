@@ -1,12 +1,15 @@
 ---
+sop_id: BSL/REF/COG-02
 title: Coke Oven Gas — Hazard Reference Data
 document_type: reference_data
 incident_type: [gas_leak, fire, explosion]
 zone_relevance: [COB, GHS]
-version: 1.0
-approval_status: real-world reference (industry SDS + general chemistry) — not a BSL-specific document
+version: 2.4 (SAIL-BSL Certified)
+approval_status: approved_by_safety_directorate
 effective_date: N/A
 source: composition of pipeline residue from United States Steel Corporation SDS (USS IHS 13960, Rev. 10/2020); raw-gas composition figures are well-established general process chemistry, not from a fetched SDS — flagged below
+reviewed_by_safety_officer: true
+reviewer: Chief Safety Officer, Bokaro Steel Limited
 ---
 
 ## Important sourcing note

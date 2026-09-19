@@ -64,6 +64,10 @@ class TicketOut(BaseModel):
     visual_analysis: dict[str, Any] | None = None
     status: str = "open"
     resolution_notes: str | None = None
+    flagged_for_human_review: bool = False
+    review_reason: str | None = None
+    sop_gap_detected: bool = False
+    ai_audit_trail: dict[str, Any] | None = None
     model_versions: dict[str, Any] | None = Field(default_factory=dict)
 
     model_config = {"from_attributes": True}

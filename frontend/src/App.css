@@ -3809,3 +3809,41 @@ body {
   border-left: 4px solid #ef4444 !important;
 }
 
+/* Phase 2: Safety Invariants & Auditable Matrix CSS */
+.table-review-flag {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 2px 6px;
+  background: rgba(245, 158, 11, 0.2);
+  border: 1px solid #f59e0b;
+  color: #fbbf24;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  vertical-align: middle;
+}
+
+.human-review-alert-banner {
+  background: rgba(129, 140, 248, 0.15);
+  border: 1px solid #818cf8;
+  color: #e0e7ff;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 0.85rem;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.advisory-pill {
+  background: #3b0764;
+  border: 1px solid #c084fc;
+  color: #e9d5ff;
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+}
+

@@ -62,4 +62,9 @@ class Ticket(Base):
     status: Mapped[str] = mapped_column(String, default="open")
     resolution_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
+    flagged_for_human_review: Mapped[bool] = mapped_column(Boolean, default=False)
+    review_reason: Mapped[str | None] = mapped_column(String, nullable=True)
+    sop_gap_detected: Mapped[bool] = mapped_column(Boolean, default=False)
+    ai_audit_trail: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+
     model_versions: Mapped[dict] = mapped_column(JSON, default=dict)

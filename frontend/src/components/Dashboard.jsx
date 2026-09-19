@@ -232,6 +232,11 @@ export default function Dashboard() {
                             </span>
                           );
                         })()}
+                        {t.flagged_for_human_review && (
+                          <span className="table-review-flag" title={t.review_reason || "Flagged for safety officer inspection"}>
+                            🔍 Review
+                          </span>
+                        )}
                       </div>
                     </td>
                     <td>{t.zone_id || "—"}</td>
@@ -279,6 +284,14 @@ export default function Dashboard() {
               {similarData?.recurring_hazard && (
                 <div className="hazard-alert-banner">
                   ⚠ <strong>RECURRING HAZARD ALERT:</strong> {similarData.recurrence_note}
+                </div>
+              )}
+
+              {/* Human Review Physical Inspection Flag */}
+              {selectedTicket.flagged_for_human_review && (
+                <div className="human-review-alert-banner">
+                  🔍 <strong>FLAGGED FOR SAFETY OFFICER PHYSICAL INSPECTION:</strong>{" "}
+                  {selectedTicket.review_reason || "Visual evidence uncorroborated or procedure gap; on-site inspection required (never auto-dismissed)."}
                 </div>
               )}
 
@@ -417,6 +430,45 @@ export default function Dashboard() {
                 </div>
               )}
 
+              {/* Statutory Rule-Based Severity Matrix Breakdown */}
+              <div className="inspector-section">
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
+                  <h4>Transparent Severity Matrix</h4>
+                  <span className="advisory-pill">ADVISORY ONLY</span>
+                </div>
+                <p className="subtitle" style={{ fontSize: "12px", color: "#94a3b8", marginTop: "-4px", marginBottom: "10px" }}>
+                  Formula: min(1.0, max(Base, Base × Likelihood × Consequence × Proximity))
+                </p>
+                {selectedTicket.severity_factors ? (
+                  <div className="matrix-factors-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "8px", marginBottom: "10px" }}>
+                    <div className="matrix-factor-card" style={{ background: "#0f172a", border: "1px solid #334155", borderRadius: "6px", padding: "8px", textAlign: "center" }}>
+                      <div style={{ fontSize: "11px", color: "#64748b", textTransform: "uppercase", fontWeight: "700" }}>Base Hazard</div>
+                      <div style={{ fontSize: "15px", color: "#38bdf8", fontWeight: "800", marginTop: "2px" }}>{selectedTicket.severity_factors.hazard_base_severity || 0.70}</div>
+                    </div>
+                    <div className="matrix-factor-card" style={{ background: "#0f172a", border: "1px solid #334155", borderRadius: "6px", padding: "8px", textAlign: "center" }}>
+                      <div style={{ fontSize: "11px", color: "#64748b", textTransform: "uppercase", fontWeight: "700" }}>Likelihood</div>
+                      <div style={{ fontSize: "15px", color: "#38bdf8", fontWeight: "800", marginTop: "2px" }}>
+                        {selectedTicket.severity_factors.likelihood?.multiplier ? `×${selectedTicket.severity_factors.likelihood.multiplier}` : "×1.0"}
+                      </div>
+                    </div>
+                    <div className="matrix-factor-card" style={{ background: "#0f172a", border: "1px solid #334155", borderRadius: "6px", padding: "8px", textAlign: "center" }}>
+                      <div style={{ fontSize: "11px", color: "#64748b", textTransform: "uppercase", fontWeight: "700" }}>Consequence</div>
+                      <div style={{ fontSize: "15px", color: "#38bdf8", fontWeight: "800", marginTop: "2px" }}>
+                        {selectedTicket.severity_factors.consequence?.multiplier ? `×${selectedTicket.severity_factors.consequence.multiplier}` : "×1.0"}
+                      </div>
+                    </div>
+                    <div className="matrix-factor-card" style={{ background: "#0f172a", border: "1px solid #334155", borderRadius: "6px", padding: "8px", textAlign: "center" }}>
+                      <div style={{ fontSize: "11px", color: "#64748b", textTransform: "uppercase", fontWeight: "700" }}>Asset Proximity</div>
+                      <div style={{ fontSize: "15px", color: "#38bdf8", fontWeight: "800", marginTop: "2px" }}>
+                        {selectedTicket.severity_factors.asset_proximity?.multiplier ? `×${selectedTicket.severity_factors.asset_proximity.multiplier}` : "×1.0"}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <p style={{ color: "#94a3b8", fontSize: "12px" }}>Calculated Statutory Score: <strong>{selectedTicket.risk_score || "0.75"}</strong></p>
+                )}
+              </div>
+
               {/* Verified Evidence Findings Matrix */}
               {selectedTicket.safety_report?.verified_summary && (
                 <div className="inspector-section">
@@ -486,6 +538,14 @@ export default function Dashboard() {
               {selectedTicket.guidance_text && (
                 <div className="inspector-section">
                   <h4>Grounded SOP Guidance</h4>
+                  <div style={{ background: "#451a03", border: "1px solid #f59e0b", borderRadius: "6px", padding: "8px 12px", marginBottom: "10px", fontSize: "12px", color: "#fef3c7" }}>
+                    ⚠️ <strong>AI-Generated Guidance — Verify with Supervisor:</strong> Retrieve-and-quote citations from approved SOPs. Shift in-charge orders take statutory precedence.
+                  </div>
+                  {selectedTicket.sop_gap_detected && (
+                    <div style={{ background: "#4c0519", border: "1px solid #e11d48", borderRadius: "6px", padding: "8px 12px", marginBottom: "10px", fontSize: "12px", color: "#ffe4e6" }}>
+                      🚨 <strong>SOP GAP DETECTED:</strong> No approved SOP procedure available for this specific incident. Universal safe evacuation protocol active.
+                    </div>
+                  )}
                   <div className="guidance-box">
                     <pre className="guidance-pre">{selectedTicket.guidance_text}</pre>
                     {selectedTicket.guidance_sources?.length > 0 && (

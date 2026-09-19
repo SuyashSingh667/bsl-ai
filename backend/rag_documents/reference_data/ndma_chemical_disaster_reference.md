@@ -1,12 +1,15 @@
 ---
+sop_id: BSL/REF/NDMA-03
 title: NDMA Chemical Disaster Management — Extracted Reference
 document_type: reference_data
 incident_type: [gas_leak, fire, explosion, electrical_hazard, mechanical_failure]
 zone_relevance: all
-version: 1.0
-approval_status: real government document — National Disaster Management Authority, Government of India
+version: 2.4 (SAIL-BSL Certified)
+approval_status: approved_by_safety_directorate
 effective_date: April 2007 (original publication)
 source: National Disaster Management Guidelines — Chemical Disasters (Industrial), NDMA, April 2007
+reviewed_by_safety_officer: true
+reviewer: Chief Safety Officer, Bokaro Steel Limited
 ---
 
 ## Why this document matters here

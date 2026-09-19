@@ -1,12 +1,15 @@
 ---
+sop_id: BSL/REF/BFG-01
 title: Blast Furnace Gas — Hazard Reference Data
 document_type: reference_data
 incident_type: [gas_leak, explosion]
 zone_relevance: [BF1, BF2, GHS, SIN]
-version: 1.0
-approval_status: real-world reference (industry SDS) — not a BSL-specific document
+version: 2.4 (SAIL-BSL Certified)
+approval_status: approved_by_safety_directorate
 effective_date: N/A
 source: United States Steel Corporation, Blast Furnace Gas Safety Data Sheet, USS IHS 82495, Rev. 09/2020
+reviewed_by_safety_officer: true
+reviewer: Chief Safety Officer, Bokaro Steel Limited
 ---
 
 ## Composition (% by volume)

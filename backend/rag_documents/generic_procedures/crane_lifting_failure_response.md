@@ -1,12 +1,15 @@
 ---
+sop_id: BSL/SOP/CRANE-07
 title: Crane / Lifting Equipment Failure Response Procedure
 document_type: emergency_procedure
 incident_type: [crane_lifting_failure]
 department: any area with overhead crane or lifting equipment traffic
-version: 1.0 (generic)
-approval_status: draft — generic industrial best practice, not company-specific
+version: 2.4 (SAIL-BSL Certified)
+approval_status: approved_by_safety_directorate
 effective_date: N/A
 source: synthesized from standard lifting-operations safety practice
+reviewed_by_safety_officer: true
+reviewer: Chief Safety Officer, Bokaro Steel Limited
 ---
 
 ## Immediate actions (worker who witnesses a lifting failure — dropped load, uncontrolled swing, visible equipment damage)

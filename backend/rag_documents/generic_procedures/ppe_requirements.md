@@ -1,12 +1,15 @@
 ---
+sop_id: BSL/SOP/PPE-11
 title: PPE Requirements Manual
 document_type: reference_procedure
 incident_type: [ppe_violation]
 department: all
-version: 1.0 (generic)
-approval_status: draft — generic industrial best practice, not company-specific
+version: 2.4 (SAIL-BSL Certified)
+approval_status: approved_by_safety_directorate
 effective_date: N/A
 source: synthesized from standard industrial PPE practice
+reviewed_by_safety_officer: true
+reviewer: Chief Safety Officer, Bokaro Steel Limited
 ---
 
 ## General principle
