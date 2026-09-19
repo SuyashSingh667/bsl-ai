@@ -303,7 +303,20 @@ export default function Dashboard() {
                     <strong>Reported At:</strong> {new Date(selectedTicket.created_at).toLocaleString()}
                   </div>
                   <div>
-                    <strong>Employee ID:</strong> {selectedTicket.employee_id || "Anonymous"}
+                    <strong>Employee / Badge:</strong> {selectedTicket.worker_badge_id || selectedTicket.employee_id || "Anonymous"}
+                  </div>
+                  <div>
+                    <strong>Reporting Mode:</strong>{" "}
+                    <span style={{
+                      padding: "2px 6px",
+                      borderRadius: "4px",
+                      fontSize: "0.75rem",
+                      fontWeight: "700",
+                      background: selectedTicket.reporting_mode === "kiosk" ? "rgba(56, 189, 248, 0.2)" : selectedTicket.reporting_mode === "supervisor_proxy" ? "rgba(245, 158, 11, 0.2)" : "rgba(100, 116, 139, 0.2)",
+                      color: selectedTicket.reporting_mode === "kiosk" ? "#38bdf8" : selectedTicket.reporting_mode === "supervisor_proxy" ? "#f59e0b" : "#cbd5e1",
+                    }}>
+                      {selectedTicket.reporting_mode === "kiosk" ? `🏢 Kiosk (${selectedTicket.kiosk_station_id || "Station"})` : selectedTicket.reporting_mode === "supervisor_proxy" ? `🛡️ Supervisor Proxy (${selectedTicket.reporter_supervisor_id || "Supervisor"})` : "📱 Personal Device"}
+                    </span>
                   </div>
                   <div>
                     <strong>Language:</strong> {LANGUAGE_NAMES[selectedTicket.language] || selectedTicket.language?.toUpperCase()}{" "}

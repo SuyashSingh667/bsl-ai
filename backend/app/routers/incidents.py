@@ -100,6 +100,10 @@ def _create_ticket(
     language_confidence: float | None = None,
     text_en: str | None = None,
     photo_proof_path: str | None = None,
+    reporting_mode: str = "personal",
+    reporter_supervisor_id: str | None = None,
+    worker_badge_id: str | None = None,
+    kiosk_station_id: str | None = None,
 ) -> Ticket:
     detected_from_text = detect_language_from_text(text)
     effective_lang = language or detected_from_text
@@ -147,6 +151,10 @@ def _create_ticket(
 
     ticket = Ticket(
         employee_id=employee_id,
+        reporting_mode=reporting_mode,
+        reporter_supervisor_id=reporter_supervisor_id,
+        worker_badge_id=worker_badge_id,
+        kiosk_station_id=kiosk_station_id,
         report_type=effective_report_type,
         incident_description=text,
         incident_description_en=text_en,
@@ -229,6 +237,10 @@ def create_incident(payload: IncidentCreate, db: Session = Depends(get_db)):
         language=payload.language,
         employee_id=payload.employee_id,
         zone_id=payload.zone_id,
+        reporting_mode=payload.reporting_mode,
+        reporter_supervisor_id=payload.reporter_supervisor_id,
+        worker_badge_id=payload.worker_badge_id,
+        kiosk_station_id=payload.kiosk_station_id,
     )
 
 
@@ -240,6 +252,10 @@ def create_incident_from_audio(
     employee_id: str | None = Form(None),
     zone_id: str | None = Form(None),
     language: str | None = Form(None),
+    reporting_mode: str = Form("personal"),
+    reporter_supervisor_id: str | None = Form(None),
+    worker_badge_id: str | None = Form(None),
+    kiosk_station_id: str | None = Form(None),
     db: Session = Depends(get_db),
 ):
     dest = AUDIO_UPLOAD_DIR / f"{uuid.uuid4().hex[:12]}_{file.filename}"
@@ -277,5 +293,9 @@ def create_incident_from_audio(
         audio_path=str(dest),
         photo_proof_path=photo_path,
         language_confidence=language_confidence,
+        reporting_mode=reporting_mode,
+        reporter_supervisor_id=reporter_supervisor_id,
+        worker_badge_id=worker_badge_id,
+        kiosk_station_id=kiosk_station_id,
     )
 

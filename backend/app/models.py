@@ -23,6 +23,10 @@ class Ticket(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)
 
     employee_id: Mapped[str | None] = mapped_column(String, nullable=True)
+    reporting_mode: Mapped[str] = mapped_column(String, default="personal")  # "personal" | "kiosk" | "supervisor_proxy"
+    reporter_supervisor_id: Mapped[str | None] = mapped_column(String, nullable=True)
+    worker_badge_id: Mapped[str | None] = mapped_column(String, nullable=True)
+    kiosk_station_id: Mapped[str | None] = mapped_column(String, nullable=True)
     report_type: Mapped[str] = mapped_column(String)  # "suspected" | "emergency"
 
     incident_description: Mapped[str] = mapped_column(Text)

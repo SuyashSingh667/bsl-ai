@@ -34,6 +34,17 @@ async def lifespan(app: FastAPI):
             conn.commit()
         except Exception:
             pass
+        for col_def in [
+            "reporting_mode VARCHAR DEFAULT 'personal'",
+            "reporter_supervisor_id VARCHAR",
+            "worker_badge_id VARCHAR",
+            "kiosk_station_id VARCHAR",
+        ]:
+            try:
+                conn.execute(text(f"ALTER TABLE tickets ADD COLUMN {col_def};"))
+                conn.commit()
+            except Exception:
+                pass
     rag.build_index()
     yield
 

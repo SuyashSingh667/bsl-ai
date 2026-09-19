@@ -4,100 +4,217 @@
       "zone_id": "RMY",
       "name": "Raw Material Yard",
       "category": "raw_material",
-      "hazard_class": ["dust", "mechanical"],
+      "hazard_class": [
+        "dust",
+        "mechanical"
+      ],
       "footprint_radius_m": 150,
-      "occupancy": {"day": 12, "night": 6},
-      "centroid": {"x": 0, "y": 0},
+      "occupancy": {
+        "day": 12,
+        "night": 6
+      },
+      "centroid": {
+        "x": 0,
+        "y": 0
+      },
       "source": "mocked",
-      "notes": "Coal/ore intake, rail sidings. Placed at western edge per typical plant layout."
+      "notes": "Coal/ore intake, rail sidings. Placed at western edge per typical plant layout.",
+      "phone_restricted": false,
+      "intrinsically_safe_only": false,
+      "safe_alternative": null
     },
     {
       "zone_id": "COB",
       "name": "Coke Oven Battery & By-Product Plant",
       "category": "hot_process",
-      "hazard_class": ["toxic_gas", "explosion", "fire", "high_heat"],
+      "hazard_class": [
+        "toxic_gas",
+        "explosion",
+        "fire",
+        "high_heat"
+      ],
       "footprint_radius_m": 120,
-      "occupancy": {"day": 25, "night": 15},
-      "centroid": {"x": 400, "y": 0},
+      "occupancy": {
+        "day": 25,
+        "night": 15
+      },
+      "centroid": {
+        "x": 400,
+        "y": 0
+      },
       "source": "mocked",
-      "notes": "Coke oven gas is toxic and explosive; tar/benzene by-products present."
+      "notes": "Coke oven gas is toxic and explosive; tar/benzene by-products present.",
+      "phone_restricted": true,
+      "intrinsically_safe_only": true,
+      "safe_alternative": "Use Gas Marshall Kiosk Station KSK-COB-01 or Intercom at Battery Control Pulpit"
     },
     {
       "zone_id": "SIN",
       "name": "Sinter Plant",
       "category": "hot_process",
-      "hazard_class": ["dust", "high_heat", "fumes"],
+      "hazard_class": [
+        "dust",
+        "high_heat",
+        "fumes"
+      ],
       "footprint_radius_m": 100,
-      "occupancy": {"day": 18, "night": 10},
-      "centroid": {"x": 800, "y": 0},
+      "occupancy": {
+        "day": 18,
+        "night": 10
+      },
+      "centroid": {
+        "x": 800,
+        "y": 0
+      },
       "source": "mocked",
-      "notes": "Iron ore fines processing, feeds blast furnace."
+      "notes": "Iron ore fines processing, feeds blast furnace.",
+      "phone_restricted": false,
+      "intrinsically_safe_only": false,
+      "safe_alternative": null
     },
     {
       "zone_id": "BF1",
       "name": "Blast Furnace 1",
       "category": "hot_process",
-      "hazard_class": ["toxic_gas", "explosion", "molten_metal", "extreme_heat"],
+      "hazard_class": [
+        "toxic_gas",
+        "explosion",
+        "molten_metal",
+        "extreme_heat"
+      ],
       "footprint_radius_m": 80,
-      "occupancy": {"day": 20, "night": 12},
-      "centroid": {"x": 1300, "y": 80},
+      "occupancy": {
+        "day": 20,
+        "night": 12
+      },
+      "centroid": {
+        "x": 1300,
+        "y": 80
+      },
       "source": "mocked",
-      "notes": "BF gas is CO-rich, toxic and flammable. Highest-severity zone class."
+      "notes": "BF gas is CO-rich, toxic and flammable. Highest-severity zone class.",
+      "phone_restricted": true,
+      "intrinsically_safe_only": true,
+      "safe_alternative": "Use Explosion-Proof Kiosk Station KSK-BF1-02 (Casthouse North Control Cabin) or Emergency Intercom at Assembly Point B"
     },
     {
       "zone_id": "BF2",
       "name": "Blast Furnace 2",
       "category": "hot_process",
-      "hazard_class": ["toxic_gas", "explosion", "molten_metal", "extreme_heat"],
+      "hazard_class": [
+        "toxic_gas",
+        "explosion",
+        "molten_metal",
+        "extreme_heat"
+      ],
       "footprint_radius_m": 80,
-      "occupancy": {"day": 20, "night": 12},
-      "centroid": {"x": 1300, "y": -80},
+      "occupancy": {
+        "day": 20,
+        "night": 12
+      },
+      "centroid": {
+        "x": 1300,
+        "y": -80
+      },
       "source": "mocked",
-      "notes": "Second furnace, ~150m from BF1."
+      "notes": "Second furnace, ~150m from BF1.",
+      "phone_restricted": true,
+      "intrinsically_safe_only": true,
+      "safe_alternative": "Use Explosion-Proof Kiosk Station KSK-BF2-01 (BF-2 Shift Office) or Emergency Intercom at Assembly Point C"
     },
     {
       "zone_id": "GHS",
       "name": "Gas Holder Station",
       "category": "utility_gas",
-      "hazard_class": ["toxic_gas", "explosion"],
+      "hazard_class": [
+        "toxic_gas",
+        "explosion"
+      ],
       "footprint_radius_m": 60,
-      "occupancy": {"day": 4, "night": 2},
-      "centroid": {"x": 1550, "y": 0},
+      "occupancy": {
+        "day": 4,
+        "night": 2
+      },
+      "centroid": {
+        "x": 1550,
+        "y": 0
+      },
       "source": "mocked",
-      "notes": "Stores/distributes BF gas, coke oven gas, LD gas. Classic large-radius gas-leak source; low routine occupancy but large potential blast radius."
+      "notes": "Stores/distributes BF gas, coke oven gas, LD gas. Classic large-radius gas-leak source; low routine occupancy but large potential blast radius.",
+      "phone_restricted": true,
+      "intrinsically_safe_only": true,
+      "safe_alternative": "Use Intrinsically-Safe Intercom at GHS Security Gate or Kiosk KSK-GHS-01"
     },
     {
       "zone_id": "SMS",
       "name": "Steel Melting Shop / LD Converters",
       "category": "hot_process",
-      "hazard_class": ["molten_metal", "explosion", "toxic_gas", "extreme_heat"],
+      "hazard_class": [
+        "molten_metal",
+        "explosion",
+        "toxic_gas",
+        "extreme_heat"
+      ],
       "footprint_radius_m": 110,
-      "occupancy": {"day": 28, "night": 16},
-      "centroid": {"x": 2200, "y": 0},
+      "occupancy": {
+        "day": 28,
+        "night": 16
+      },
+      "centroid": {
+        "x": 2200,
+        "y": 0
+      },
       "source": "mocked",
-      "notes": "Receives hot metal from blast furnaces, LD gas + oxygen lancing hazards."
+      "notes": "Receives hot metal from blast furnaces, LD gas + oxygen lancing hazards.",
+      "phone_restricted": true,
+      "intrinsically_safe_only": true,
+      "safe_alternative": "Use Fixed Kiosk KSK-SMS-04 (Converter Pulpit) or Crane Bay Intercom"
     },
     {
       "zone_id": "CC",
       "name": "Continuous Casting",
       "category": "hot_process",
-      "hazard_class": ["molten_metal", "steam_explosion", "extreme_heat"],
+      "hazard_class": [
+        "molten_metal",
+        "steam_explosion",
+        "extreme_heat"
+      ],
       "footprint_radius_m": 90,
-      "occupancy": {"day": 22, "night": 14},
-      "centroid": {"x": 2350, "y": 0},
+      "occupancy": {
+        "day": 22,
+        "night": 14
+      },
+      "centroid": {
+        "x": 2350,
+        "y": 0
+      },
       "source": "mocked",
-      "notes": "Adjacent to SMS. Water/molten-metal contact risk."
+      "notes": "Adjacent to SMS. Water/molten-metal contact risk.",
+      "phone_restricted": true,
+      "intrinsically_safe_only": true,
+      "safe_alternative": "Use Fixed Kiosk KSK-CC-02 (Caster Control Room) or Assembly Point E Intercom"
     },
     {
       "zone_id": "LWS",
       "name": "Loco & Wagon Shed",
       "category": "maintenance",
-      "hazard_class": ["mechanical"],
+      "hazard_class": [
+        "mechanical"
+      ],
       "footprint_radius_m": 70,
-      "occupancy": {"day": 10, "night": 5},
-      "centroid": {"x": 3650, "y": -300},
+      "occupancy": {
+        "day": 10,
+        "night": 5
+      },
+      "centroid": {
+        "x": 3650,
+        "y": -300
+      },
       "source": "confirmed",
-      "notes": "From Mapcarta/OSM labels near Plant Plaza Road."
+      "notes": "From Mapcarta/OSM labels near Plant Plaza Road.",
+      "phone_restricted": false,
+      "intrinsically_safe_only": false,
+      "safe_alternative": null
     },
     {
       "zone_id": "RB",
@@ -105,10 +222,19 @@
       "category": "admin",
       "hazard_class": [],
       "footprint_radius_m": 40,
-      "occupancy": {"day": 15, "night": 3},
-      "centroid": {"x": 3700, "y": -280},
+      "occupancy": {
+        "day": 15,
+        "night": 3
+      },
+      "centroid": {
+        "x": 3700,
+        "y": -280
+      },
       "source": "confirmed",
-      "notes": "Rail administration building."
+      "notes": "Rail administration building.",
+      "phone_restricted": false,
+      "intrinsically_safe_only": false,
+      "safe_alternative": null
     },
     {
       "zone_id": "SB",
@@ -116,131 +242,269 @@
       "category": "storage",
       "hazard_class": [],
       "footprint_radius_m": 50,
-      "occupancy": {"day": 8, "night": 2},
-      "centroid": {"x": 3750, "y": -290},
+      "occupancy": {
+        "day": 8,
+        "night": 2
+      },
+      "centroid": {
+        "x": 3750,
+        "y": -290
+      },
       "source": "confirmed",
-      "notes": "General materials storage."
+      "notes": "General materials storage.",
+      "phone_restricted": false,
+      "intrinsically_safe_only": false,
+      "safe_alternative": null
     },
     {
       "zone_id": "PS",
       "name": "Pattern Shop",
       "category": "workshop",
-      "hazard_class": ["fire"],
+      "hazard_class": [
+        "fire"
+      ],
       "footprint_radius_m": 45,
-      "occupancy": {"day": 10, "night": 2},
-      "centroid": {"x": 3800, "y": -270},
+      "occupancy": {
+        "day": 10,
+        "night": 2
+      },
+      "centroid": {
+        "x": 3800,
+        "y": -270
+      },
       "source": "confirmed",
-      "notes": "Foundry pattern-making workshop."
+      "notes": "Foundry pattern-making workshop.",
+      "phone_restricted": false,
+      "intrinsically_safe_only": false,
+      "safe_alternative": null
     },
     {
       "zone_id": "ICF",
       "name": "Iron & Copper Foundry",
       "category": "workshop",
-      "hazard_class": ["molten_metal", "fire"],
+      "hazard_class": [
+        "molten_metal",
+        "fire"
+      ],
       "footprint_radius_m": 55,
-      "occupancy": {"day": 15, "night": 6},
-      "centroid": {"x": 3850, "y": -300},
+      "occupancy": {
+        "day": 15,
+        "night": 6
+      },
+      "centroid": {
+        "x": 3850,
+        "y": -300
+      },
       "source": "confirmed",
-      "notes": "Metal casting workshop, burn hazard."
+      "notes": "Metal casting workshop, burn hazard.",
+      "phone_restricted": false,
+      "intrinsically_safe_only": false,
+      "safe_alternative": null
     },
     {
       "zone_id": "SS",
       "name": "Structural Shop",
       "category": "workshop",
-      "hazard_class": ["mechanical", "fire"],
+      "hazard_class": [
+        "mechanical",
+        "fire"
+      ],
       "footprint_radius_m": 55,
-      "occupancy": {"day": 14, "night": 4},
-      "centroid": {"x": 3900, "y": -260},
+      "occupancy": {
+        "day": 14,
+        "night": 4
+      },
+      "centroid": {
+        "x": 3900,
+        "y": -260
+      },
       "source": "confirmed",
-      "notes": "Structural fabrication."
+      "notes": "Structural fabrication.",
+      "phone_restricted": false,
+      "intrinsically_safe_only": false,
+      "safe_alternative": null
     },
     {
       "zone_id": "MS",
       "name": "Machine Shop",
       "category": "workshop",
-      "hazard_class": ["mechanical"],
+      "hazard_class": [
+        "mechanical"
+      ],
       "footprint_radius_m": 60,
-      "occupancy": {"day": 16, "night": 5},
-      "centroid": {"x": 3980, "y": -250},
+      "occupancy": {
+        "day": 16,
+        "night": 5
+      },
+      "centroid": {
+        "x": 3980,
+        "y": -250
+      },
       "source": "confirmed",
-      "notes": "Machining/mechanical hazards."
+      "notes": "Machining/mechanical hazards.",
+      "phone_restricted": false,
+      "intrinsically_safe_only": false,
+      "safe_alternative": null
     },
     {
       "zone_id": "RCL",
       "name": "R&C Lab",
       "category": "lab",
-      "hazard_class": ["chemical"],
+      "hazard_class": [
+        "chemical"
+      ],
       "footprint_radius_m": 40,
-      "occupancy": {"day": 8, "night": 2},
-      "centroid": {"x": 4030, "y": -260},
+      "occupancy": {
+        "day": 8,
+        "night": 2
+      },
+      "centroid": {
+        "x": 4030,
+        "y": -260
+      },
       "source": "confirmed",
-      "notes": "Likely Research & Control or Refractory & Ceramic lab; function inferred from label only."
+      "notes": "Likely Research & Control or Refractory & Ceramic lab; function inferred from label only.",
+      "phone_restricted": false,
+      "intrinsically_safe_only": false,
+      "safe_alternative": null
     },
     {
       "zone_id": "ERS",
       "name": "Engineering Repair Shop",
       "category": "maintenance",
-      "hazard_class": ["mechanical"],
+      "hazard_class": [
+        "mechanical"
+      ],
       "footprint_radius_m": 55,
-      "occupancy": {"day": 12, "night": 4},
-      "centroid": {"x": 4080, "y": -240},
+      "occupancy": {
+        "day": 12,
+        "night": 4
+      },
+      "centroid": {
+        "x": 4080,
+        "y": -240
+      },
       "source": "confirmed",
-      "notes": "Full name inferred from 'ERS' label; common SAIL-plant department naming."
+      "notes": "Full name inferred from 'ERS' label; common SAIL-plant department naming.",
+      "phone_restricted": false,
+      "intrinsically_safe_only": false,
+      "safe_alternative": null
     },
     {
       "zone_id": "SM",
       "name": "S Mill",
       "category": "mill",
-      "hazard_class": ["mechanical", "high_heat"],
+      "hazard_class": [
+        "mechanical",
+        "high_heat"
+      ],
       "footprint_radius_m": 90,
-      "occupancy": {"day": 22, "night": 12},
-      "centroid": {"x": 4150, "y": 30},
+      "occupancy": {
+        "day": 22,
+        "night": 12
+      },
+      "centroid": {
+        "x": 4150,
+        "y": 30
+      },
       "source": "confirmed",
-      "notes": "Rolling operation; exact mill type inferred from label only."
+      "notes": "Rolling operation; exact mill type inferred from label only.",
+      "phone_restricted": false,
+      "intrinsically_safe_only": false,
+      "safe_alternative": null
     },
     {
       "zone_id": "ACY",
       "name": "Addn Coil Yard",
       "category": "storage",
-      "hazard_class": ["mechanical"],
+      "hazard_class": [
+        "mechanical"
+      ],
       "footprint_radius_m": 80,
-      "occupancy": {"day": 10, "night": 4},
-      "centroid": {"x": 4250, "y": 50},
+      "occupancy": {
+        "day": 10,
+        "night": 4
+      },
+      "centroid": {
+        "x": 4250,
+        "y": 50
+      },
       "source": "confirmed",
-      "notes": "Coil storage yard."
+      "notes": "Coil storage yard.",
+      "phone_restricted": false,
+      "intrinsically_safe_only": false,
+      "safe_alternative": null
     },
     {
       "zone_id": "HRCF",
       "name": "Hot Rolled Coil Facility",
       "category": "mill",
-      "hazard_class": ["high_heat", "mechanical"],
+      "hazard_class": [
+        "high_heat",
+        "mechanical"
+      ],
       "footprint_radius_m": 100,
-      "occupancy": {"day": 24, "night": 14},
-      "centroid": {"x": 4350, "y": 20},
+      "occupancy": {
+        "day": 24,
+        "night": 14
+      },
+      "centroid": {
+        "x": 4350,
+        "y": 20
+      },
       "source": "confirmed",
-      "notes": "Hot-end coil handling; full name inferred from label."
+      "notes": "Hot-end coil handling; full name inferred from label.",
+      "phone_restricted": false,
+      "intrinsically_safe_only": false,
+      "safe_alternative": null
     },
     {
       "zone_id": "CRM",
       "name": "Cold Rolling Mill",
       "category": "mill",
-      "hazard_class": ["chemical", "mechanical", "fire"],
+      "hazard_class": [
+        "chemical",
+        "mechanical",
+        "fire"
+      ],
       "footprint_radius_m": 110,
-      "occupancy": {"day": 30, "night": 16},
-      "centroid": {"x": 4450, "y": -20},
+      "occupancy": {
+        "day": 30,
+        "night": 16
+      },
+      "centroid": {
+        "x": 4450,
+        "y": -20
+      },
       "source": "confirmed",
-      "notes": "Rolling with oils/acids; chemical + mechanical hazard."
+      "notes": "Rolling with oils/acids; chemical + mechanical hazard.",
+      "phone_restricted": false,
+      "intrinsically_safe_only": false,
+      "safe_alternative": null
     },
     {
       "zone_id": "CRM3",
       "name": "Cold Rolling Mill Unit III",
       "category": "mill",
-      "hazard_class": ["chemical", "mechanical", "fire"],
+      "hazard_class": [
+        "chemical",
+        "mechanical",
+        "fire"
+      ],
       "footprint_radius_m": 110,
-      "occupancy": {"day": 28, "night": 15},
-      "centroid": {"x": 4550, "y": -20},
+      "occupancy": {
+        "day": 28,
+        "night": 15
+      },
+      "centroid": {
+        "x": 4550,
+        "y": -20
+      },
       "source": "confirmed",
-      "notes": "Adjacent CRM unit."
+      "notes": "Adjacent CRM unit.",
+      "phone_restricted": false,
+      "intrinsically_safe_only": false,
+      "safe_alternative": null
     },
     {
       "zone_id": "TCR",
@@ -248,10 +512,19 @@
       "category": "utility",
       "hazard_class": [],
       "footprint_radius_m": 20,
-      "occupancy": {"day": 4, "night": 2},
-      "centroid": {"x": 4600, "y": -150},
+      "occupancy": {
+        "day": 4,
+        "night": 2
+      },
+      "centroid": {
+        "x": 4600,
+        "y": -150
+      },
       "source": "confirmed",
-      "notes": "Plant traffic/logistics coordination point."
+      "notes": "Plant traffic/logistics coordination point.",
+      "phone_restricted": false,
+      "intrinsically_safe_only": false,
+      "safe_alternative": null
     },
     {
       "zone_id": "GATE1",
@@ -259,21 +532,43 @@
       "category": "boundary",
       "hazard_class": [],
       "footprint_radius_m": 20,
-      "occupancy": {"day": 6, "night": 3},
-      "centroid": {"x": 4700, "y": -200},
+      "occupancy": {
+        "day": 6,
+        "night": 3
+      },
+      "centroid": {
+        "x": 4700,
+        "y": -200
+      },
       "source": "confirmed",
-      "notes": "Plant boundary opening directly onto Bokaro Steel City township."
+      "notes": "Plant boundary opening directly onto Bokaro Steel City township.",
+      "phone_restricted": false,
+      "intrinsically_safe_only": false,
+      "safe_alternative": null
     },
     {
       "zone_id": "PWR",
       "name": "Bokaro Works Power Plant",
       "category": "utility_power",
-      "hazard_class": ["fire", "high_heat", "boiler_explosion"],
+      "hazard_class": [
+        "fire",
+        "high_heat",
+        "boiler_explosion"
+      ],
       "footprint_radius_m": 150,
-      "occupancy": {"day": 20, "night": 12},
-      "centroid": {"x": 2000, "y": 1400},
+      "occupancy": {
+        "day": 20,
+        "night": 12
+      },
+      "centroid": {
+        "x": 2000,
+        "y": 1400
+      },
       "source": "confirmed",
-      "notes": "On the cooling-pond edge, near the Damodar river."
+      "notes": "On the cooling-pond edge, near the Damodar river.",
+      "phone_restricted": false,
+      "intrinsically_safe_only": false,
+      "safe_alternative": null
     },
     {
       "zone_id": "POND",
@@ -281,10 +576,19 @@
       "category": "water_body",
       "hazard_class": [],
       "footprint_radius_m": 300,
-      "occupancy": {"day": 0, "night": 0},
-      "centroid": {"x": 2300, "y": 1300},
+      "occupancy": {
+        "day": 0,
+        "night": 0
+      },
+      "centroid": {
+        "x": 2300,
+        "y": 1300
+      },
       "source": "confirmed",
-      "notes": "Not an occupied zone; acts as a physical barrier/evacuation obstacle."
+      "notes": "Not an occupied zone; acts as a physical barrier/evacuation obstacle.",
+      "phone_restricted": false,
+      "intrinsically_safe_only": false,
+      "safe_alternative": null
     },
     {
       "zone_id": "TOWNSHIP",
@@ -293,9 +597,15 @@
       "hazard_class": [],
       "footprint_radius_m": 50,
       "occupancy": null,
-      "centroid": {"x": 5200, "y": -250},
+      "centroid": {
+        "x": 5200,
+        "y": -250
+      },
       "source": "confirmed",
-      "notes": "Centroid marks the nearest built-up edge of the township to the plant (just past Plant Gate No-1), not the town center — footprint is small on purpose so this only triggers when a hazard genuinely reaches the boundary, not just 'somewhere within the town's overall size'. Headcount not modeled; any reach here triggers a civilian-exposure escalation regardless of estimated count."
+      "notes": "Centroid marks the nearest built-up edge of the township to the plant (just past Plant Gate No-1), not the town center \u2014 footprint is small on purpose so this only triggers when a hazard genuinely reaches the boundary, not just 'somewhere within the town's overall size'. Headcount not modeled; any reach here triggers a civilian-exposure escalation regardless of estimated count.",
+      "phone_restricted": false,
+      "intrinsically_safe_only": false,
+      "safe_alternative": null
     }
   ]
 }

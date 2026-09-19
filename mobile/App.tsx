@@ -6,10 +6,12 @@ import { MediaEvidenceScreen } from './src/screens/MediaEvidenceScreen';
 import { VerificationInterviewScreen } from './src/screens/VerificationInterviewScreen';
 import { PrecautionaryMeasuresScreen } from './src/screens/PrecautionaryMeasuresScreen';
 import { TicketResultScreen } from './src/screens/TicketResultScreen';
+import { KioskLoginScreen, KioskSession } from './src/screens/KioskLoginScreen';
 import { ServerConfigModal } from './src/components/ServerConfigModal';
 import { Ticket } from './src/services/api';
 
 type WorkflowStep =
+  | 'kiosk_login'
   | 'select_type'
   | 'record_incident'
   | 'media_evidence'
@@ -21,6 +23,7 @@ export default function App() {
   const [step, setStep] = useState<WorkflowStep>('select_type');
   const [reportType, setReportType] = useState<'emergency' | 'suspected'>('suspected');
   const [ticket, setTicket] = useState<Ticket | null>(null);
+  const [kioskSession, setKioskSession] = useState<KioskSession | null>(null);
   const [showConfigModal, setShowConfigModal] = useState<boolean>(false);
 
   // 1. Report type selected
@@ -53,7 +56,7 @@ export default function App() {
     }
   };
 
-  // 4. Skip media if worker in danger
+  // 4. Skip media if worker in danger or optional skip
   const handleSkipMedia = () => {
     const isEmergency = ticket?.report_type === 'emergency' || reportType === 'emergency';
     if (isEmergency) {
@@ -72,17 +75,36 @@ export default function App() {
   // 6. Reset to log another report
   const handleStartNewReport = () => {
     setTicket(null);
-    setStep('select_type');
+    if (kioskSession) {
+      // Return to kiosk login for next worker on shared terminal
+      setStep('kiosk_login');
+    } else {
+      setStep('select_type');
+    }
   };
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="light-content" backgroundColor="#070d18" />
       <View style={styles.container}>
+        {step === 'kiosk_login' && (
+          <KioskLoginScreen
+            onSessionStart={(session) => {
+              setKioskSession(session);
+              setStep('select_type');
+            }}
+            onExitKiosk={() => {
+              setKioskSession(null);
+              setStep('select_type');
+            }}
+          />
+        )}
+
         {step === 'select_type' && (
           <ReportTypeSelect
             onSelect={handleSelectReportType}
             onOpenSettings={() => setShowConfigModal(true)}
+            onOpenKiosk={() => setStep('kiosk_login')}
           />
         )}
 
@@ -91,6 +113,8 @@ export default function App() {
             reportType={reportType}
             onIncidentCreated={handleIncidentCreated}
             onBack={() => setStep('select_type')}
+            kioskSession={kioskSession}
+            onSwitchToKiosk={() => setStep('kiosk_login')}
           />
         )}
 

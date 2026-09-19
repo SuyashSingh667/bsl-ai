@@ -196,6 +196,18 @@ _PHONETIC_REPLACEMENTS = [
     (r"(पता\s*नही|पता\s*ने|मालूम\s*नही)", "पता नहीं"),
     (r"(देखा\s*था|देका\s*था|दिखा\s*था)", "देखा था"),
     (r"(सुना\s*था|सूना\s*था|सूना\s*है)", "सुना है"),
+
+    # ---- Steel Plant Equipment & Process Lexicon ----
+    (r"(ट्यूअर|ट्यूयर|टूयर|ट्वियर|ट्वाइयर)", "ट्यूयर (tuyere)"),
+    (r"(लोटो|लो\s*टो|लॉटो|लॉकआउट)", "LOTO (लॉकआउट-टैगआउट)"),
+    (r"(स्लेग|स्लैग|स्लेक|मलबा\s*धातु)", "स्लैग (slag)"),
+    (r"(कास्ट\s*हाउस|कास्टहाउस|ढलाई\s*घर)", "कास्टहाउस (casthouse)"),
+    (r"(कन्वर्टर|कनवर्टर|एलडी\s*कन्वर्टर)", "कन्वर्टर (LD converter)"),
+    (r"(लेडल|लैडल|लैडिल|हॉट\s*मेटल\s*लेडल)", "लैडल (ladle)"),
+    (r"(टन्डिश|टंडिश|टनडिश)", "टंडिश (tundish)"),
+    (r"(मड\s*गन|मडगन)", "मड गन (mud gun)"),
+    (r"(बसल\s*पाइप|बस्टिल\s*पाइप)", "बसल पाइप (bustle pipe)"),
+    (r"(टैप\s*होल|टैपहोल|निकासी\s*द्वार)", "टैपहोल (taphole)"),
 ]
 
 _ENGLISH_PHONETIC_FIXES = [
@@ -208,14 +220,25 @@ _ENGLISH_PHONETIC_FIXES = [
     (r"\blife\s*wire\b", "live wire"),
     (r"\bstruck\s+with\s+lightning\b", "struck by an electric shock"),
     (r"\bstuck\s+by\s+lightning\b", "struck by an electric shock"),
-    (r"\bsmoke\s+oven\b", "coke oven"),
-    (r"\bDoes\s+look\s+positive\b", "10 workers present in danger zone"),
-    (r"\bDust\s+look\s+has\s+happened\b", "10 workers in danger zone"),
     (r"\bfight\b", "fire"),
     (r"\bgarden\b", "gas"),
     (r"\bloot\b", "leak"),
     (r"\bbuy,\s*it's\b", "blast furnace"),
     (r"\btwirl\b", "transformer"),
+    # Steel Plant Industrial Domain Glossary Post-Corrections
+    (r"\b(two\s*year|to\s*year|tuyer|twyer|toyer)\b", "tuyere"),
+    (r"\b(low\s*toe|lotto|lo\s*to|loto\s*system)\b", "LOTO"),
+    (r"\b(cast\s*house|casthause|cast\s*haus)\b", "casthouse"),
+    (r"\b(convertor|con\s*vert\s*er|ld\s*convertor)\b", "converter"),
+    (r"\b(slagg|sleg|slow\s*pool)\b", "slag"),
+    (r"\bmolten\s+slow\b", "molten slag"),
+    (r"\b(b\s*f\s*gas|beef\s*gas|blast\s*furnace\s*gas)\b", "BF gas"),
+    (r"\b(lay\s*dull|laddle|hot\s*metal\s*laddle)\b", "ladle"),
+    (r"\b(tun\s*dish|ton\s*dish)\b", "tundish"),
+    (r"\b(mud\s*gun|mad\s*gun)\b", "mud gun"),
+    (r"\b(bustle\s*pipe|busle\s*pipe|bustel\s*pipe)\b", "bustle pipe"),
+    (r"\b(iron\s*runner|metal\s*runner|slagg\s*runner)\b", "runner"),
+    (r"\b(tap\s*hole|tap\s*hol|tephole)\b", "taphole"),
 ]
 
 
@@ -243,10 +266,47 @@ def clean_hallucinations(text: str) -> str:
     """Removes CJK/Japanese artifacts, collapses repetitive tokens, and applies phonetic fixes."""
     if not text:
         return ""
-    cleaned = _CJK_KANA_RE.sub(" ", text)
+    cleaned = _CJK_KANA_RE.sub("", text)
     cleaned = clean_repeated_phrases(cleaned)
     cleaned = normalize_hindi_phonetics(cleaned)
-    return re.sub(r"\s+", " ", cleaned).strip()
+    cleaned = normalize_english_safety_terms(cleaned)
+    return cleaned.strip()
+
+
+CRITICAL_PLANT_TERMS = [
+    "tuyere", "loto", "slag", "casthouse", "converter", "ladle",
+    "tundish", "mud gun", "bustle pipe", "taphole", "gas leak",
+    "blast furnace", "transformer", "arc flash", "scba",
+]
+
+
+def check_critical_term_clarification(
+    text: str,
+    segments: list[dict[str, Any]],
+) -> tuple[bool, str | None, str | None]:
+    """
+    Evaluates segment-level ASR confidence on safety-critical plant terminology.
+    If a critical term was detected with confidence < 0.65, triggers a clarification
+    question instead of guessing or hallucinating.
+    """
+    if not text:
+        return False, None, None
+
+    text_lower = text.lower()
+    for seg in segments:
+        seg_text = seg.get("text", "").lower()
+        seg_conf = seg.get("confidence", 1.0)
+
+        for term in CRITICAL_PLANT_TERMS:
+            if term in seg_text and seg_conf < 0.65:
+                prompt = (
+                    f"Low speech recognition confidence ({int(seg_conf * 100)}%) on critical term '{term}'. "
+                    f"Did you refer to '{term}' or a different component? Please confirm."
+                )
+                logger.info(f"Triggered ASR clarification on low-confidence term '{term}' (conf: {seg_conf})")
+                return True, term, prompt
+
+    return False, None, None
 
 
 def _load_and_normalize_audio(audio_path: str) -> np.ndarray | str:

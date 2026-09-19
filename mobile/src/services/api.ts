@@ -7,6 +7,7 @@ export interface Ticket {
   incident_description: string;
   incident_description_en?: string;
   language?: string;
+  language_confidence?: number;
   predicted_category?: string;
   category_confidence?: number;
   photo_proof_path?: string;
@@ -15,6 +16,12 @@ export interface Ticket {
   media_type?: 'image' | 'video';
   requires_photo_proof?: boolean;
   zone_id?: string;
+  reporting_mode?: string;
+  reporter_supervisor_id?: string;
+  worker_badge_id?: string;
+  kiosk_station_id?: string;
+  clarification_prompt?: string;
+  needs_clarification?: boolean;
   verification_questions?: string[];
   verification_answers?: string[];
   verification_answers_en?: string[];
@@ -224,5 +231,39 @@ export async function getPrecautionaryMeasures(ticketId: string): Promise<any> {
     throw new Error(`Failed to fetch precautionary measures: ${txt}`);
   }
   return res.json();
+}
+
+/**
+ * Synchronizes an individual item from the offline outbox queue to the server.
+ */
+export async function syncQueuedOutboxItem(item: any): Promise<boolean> {
+  try {
+    if (item.type === 'incident_report') {
+      await createIncidentFromText(item.payload);
+      return true;
+    } else if (item.type === 'incident_audio') {
+      await createIncidentFromAudio(
+        item.payload.audioUri,
+        item.payload.reportType,
+        item.payload.language
+      );
+      return true;
+    } else if (item.type === 'verification_answer') {
+      await submitVerificationAnswer(item.payload.ticketId, item.payload.answerText);
+      return true;
+    } else if (item.type === 'sos_emergency') {
+      await createIncidentFromText({
+        report_type: 'emergency',
+        incident_description: `[OFFLINE SOS EMERGENCY] ${item.payload.description || 'Worker pressed emergency SOS button'}`,
+        zone_id: item.payload.zone_id,
+        language: item.payload.language || 'hi',
+      });
+      return true;
+    }
+    return true;
+  } catch (err) {
+    console.warn(`[API] Failed to sync outbox item ${item.id}:`, err);
+    return false;
+  }
 }
 

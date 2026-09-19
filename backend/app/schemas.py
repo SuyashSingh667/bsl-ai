@@ -8,6 +8,10 @@ class IncidentCreate(BaseModel):
     report_type: str = Field(pattern="^(suspected|emergency)$")
     incident_description: str
     employee_id: str | None = None
+    reporting_mode: str = "personal"
+    reporter_supervisor_id: str | None = None
+    worker_badge_id: str | None = None
+    kiosk_station_id: str | None = None
     zone_id: str | None = None
     language: str = "en"
 
@@ -31,6 +35,10 @@ class TicketOut(BaseModel):
     created_at: datetime
     updated_at: datetime
     employee_id: str | None
+    reporting_mode: str = "personal"
+    reporter_supervisor_id: str | None = None
+    worker_badge_id: str | None = None
+    kiosk_station_id: str | None = None
     report_type: str
     incident_description: str
     incident_description_en: str

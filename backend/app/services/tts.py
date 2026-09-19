@@ -152,13 +152,20 @@ def synthesize(text: str, language: str = "en") -> str:
     if wav_dest.exists() and wav_dest.stat().st_size > 0:
         return str(wav_dest)
 
-    # 1. Edge-TTS Neural Voice (High fidelity, silky smooth)
-    if lang in _NEURAL_VOICES:
-        voice = _NEURAL_VOICES[lang]
-        if _run_async_edge(clean_text, voice, mp3_dest):
-            return str(mp3_dest)
+    # 1. Check Pluggable Enterprise TTS Provider (Pre-Cached SOP Audio & Licensed Provider)
+    try:
+        from app.services.tts_provider import get_tts_manager
+        tts_mgr = get_tts_manager()
+        if tts_mgr.synthesize(clean_text, lang, wav_dest):
+            return str(wav_dest)
+    except Exception as exc:
+        logger.debug(f"Pluggable TTS provider check passed to fallback: {exc}")
 
-    # 2. gTTS (Smooth neural web synthesis, e.g. for Punjabi, Odia, or fallback)
+    # 2. Local offline system synthesis (macOS say / Linux espeak-ng)
+    if _synthesize_macos(clean_text, lang, wav_dest):
+        return str(wav_dest if wav_dest.exists() else mp3_dest)
+
+    # 3. Fallback gTTS if online
     gtts_code = _GTTS_LANGS.get(lang)
     if gtts_code:
         if _synthesize_gtts(clean_text, gtts_code, mp3_dest):
