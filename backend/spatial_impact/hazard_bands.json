@@ -1,0 +1,17 @@
+{
+  "model_version": "tier1-static-radius-v1",
+  "description": "Safety-officer-editable configuration. These radii and probabilities are placeholders for a prototype and must be reviewed/approved before any real-world use.",
+  "bands": {
+    "gas_leak": {"primary_m": 150, "secondary_m": 400, "primary_harm_prob": 0.6, "secondary_harm_prob": 0.15},
+    "fire": {"primary_m": 100, "secondary_m": 250, "primary_harm_prob": 0.5, "secondary_harm_prob": 0.1},
+    "explosion": {"primary_m": 300, "secondary_m": 800, "primary_harm_prob": 0.7, "secondary_harm_prob": 0.2},
+    "electrical_hazard": {"primary_m": 20, "secondary_m": 50, "primary_harm_prob": 0.4, "secondary_harm_prob": 0.1},
+    "mechanical_failure": {"primary_m": 15, "secondary_m": 40, "primary_harm_prob": 0.4, "secondary_harm_prob": 0.1},
+    "molten_metal_spill": {"primary_m": 50, "secondary_m": 150, "primary_harm_prob": 0.8, "secondary_harm_prob": 0.2},
+    "confined_space_emergency": {"primary_m": 10, "secondary_m": 30, "primary_harm_prob": 0.7, "secondary_harm_prob": 0.25},
+    "crane_lifting_failure": {"primary_m": 40, "secondary_m": 100, "primary_harm_prob": 0.6, "secondary_harm_prob": 0.15},
+    "vehicle_traffic_incident": {"primary_m": 20, "secondary_m": 60, "primary_harm_prob": 0.5, "secondary_harm_prob": 0.1},
+    "chemical_spill": {"primary_m": 60, "secondary_m": 180, "primary_harm_prob": 0.5, "secondary_harm_prob": 0.12}
+  },
+  "not_applicable": ["slip_fall", "ppe_violation"]
+}

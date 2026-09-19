@@ -7,10 +7,18 @@ PROJECT_ROOT = BACKEND_DIR.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-VERIFICATION_QUESTIONS_PATH = PROJECT_ROOT / "verification_questions.json"
-ZONES_PATH = PROJECT_ROOT / "spatial_impact" / "zones.json"
-HAZARD_BANDS_PATH = PROJECT_ROOT / "spatial_impact" / "hazard_bands.json"
-RAG_DOCUMENTS_DIR = PROJECT_ROOT / "rag_documents"
+def _resolve_path(rel_path: str) -> Path:
+    # Check BACKEND_DIR first (in case running inside container with rootDir=backend)
+    p = BACKEND_DIR / rel_path
+    if p.exists():
+        return p
+    # Fallback to PROJECT_ROOT (local dev)
+    return PROJECT_ROOT / rel_path
+
+VERIFICATION_QUESTIONS_PATH = _resolve_path("verification_questions.json")
+ZONES_PATH = _resolve_path("spatial_impact/zones.json")
+HAZARD_BANDS_PATH = _resolve_path("spatial_impact/hazard_bands.json")
+RAG_DOCUMENTS_DIR = _resolve_path("rag_documents")
 
 DATABASE_URL = f"sqlite:///{BACKEND_DIR / 'data' / 'bsl.db'}"
 
