@@ -93,7 +93,7 @@ export default function App() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="light-content" backgroundColor="#070d18" />
+      <StatusBar barStyle="light-content" backgroundColor="#000000" />
       <View style={styles.container}>
         {step === 'kiosk_login' && (
           <KioskLoginScreen
@@ -169,10 +169,10 @@ export default function App() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#070d18',
+    backgroundColor: '#000000',
   },
   container: {
     flex: 1,
-    backgroundColor: '#070d18',
+    backgroundColor: '#000000',
   },
 });
