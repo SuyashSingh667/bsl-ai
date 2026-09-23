@@ -44,7 +44,7 @@ PROMPT_VOCAB_HI = (
     "आग लग गई, धुआं, लपटें, विस्फोट, शॉर्ट सर्किट, बिजली का झटका, स्पार्क, ट्रांसफार्मर, पैनल, "
     "पिघला हुआ लोहा, हॉट मेटल लैडल, स्लैग, क्रेन, तार टूटा, लोड गिरा, सीमित स्थान, टैंक, गड्ढा, "
     "एसिड रिसाव, तेजाब, हाइड्रोक्लोरिक, ट्रक में आग, डंपर टक्कर, गाड़ी, सायरन, एम्बुलेंस, प्राथमिक उपचार, "
-    "नियंत्रण कक्ष, खाली कराया, "
+    "नियंत्रण कक्ष, खाली कराया, एक्सीडेंट, दुर्घटना, टक्कर, वाहन, दो लोग आ गए, ट्रक के आगे, घायल, चोट, "
     # Common Hindi interview answer phrases that Whisper often mishears:
     "हाँ, नहीं, पता नहीं, मैंने देखा, आग लगी है, गैस निकल रही है, "
     "बहुत तेज धुआं, लोग घायल, बेहोश, करंट लगा, बिजली का तार टूटा, "
@@ -130,19 +130,21 @@ _PHONETIC_REPLACEMENTS = [
     (r"(होइस्ट|हायस्ट|होईस्ट|हॉइस्ट)", "होइस्ट"),
     (r"(स्लिंग|शलिंग|स्लींग)", "स्लिंग"),
 
-    # ---- Transport / vehicles ----
-    (r"(तरक|टर्क|तरुक|टरक)", "ट्रक"),
+    # ---- Transport / vehicles & accidents ----
+    (r"(तरक|टर्क|तरुक|टरक|त्रक)", "ट्रक"),
     (r"(डमपर|दम्पर|दमपर)", "डंपर"),
     (r"(फोर्क\s*लिफ्ट|फोर्कलिप्ट|फार्कलिफ्ट)", "फोर्कलिफ्ट"),
     (r"(लोकोमोटिव|लोकोमोटीव|लोको\s*मोटिव)", "लोकोमोटिव"),
+    (r"(अख्सिडिन्ट|अख्सिट्रिंट|अक्सिडेंट|अक्सिडिंट|अख्सिड़ेंट|अग्सिड़ेंट|अक्सीडेन्ट|अक्सिडेंट|एक्सिडेंट|एक्सीडेन्ट|एकसीडेंट|अकसीडेंट)", "एक्सीडेंट"),
+    (r"(तो\s*लोग|डो\s*लोग)", "दो लोग"),
 
     # ---- Fire & Smoke ----
     (r"(आग\s*वाग)", "आग लगी"),
-    (r"(अग\s+अगती|आग\s+अगती|आग\s+लगती|आग\s+अगलती|आग\s+अग\s+अगती)", "आग लगती"),
+    (r"(अग\s+अगती|आग\s+अगती|आग\s+लगती|आग\s+अगलती|आग\s+अग\s+अगती|आगल\s+लगती)", "आग लगती"),
     (r"(हुटिवी|हुई\s*दिख|दिखा\s*रहा)", "हुई दिखाई"),
     (r"(तेखाय|देखाए)\s*देरही", "दिखाई दे रही"),
     (r"(धुवा|धुआ)\s*(बहल|फैल|फेल)", "धुआं फैल"),
-    (r"(कुक\s*अपन|कुक\s*अवान|स्मोक\s*ओवन)", "कोक ओवन"),
+    (r"(कुक\s*अपन|कुक\s*अवान|स्मोक\s*ओवन|को\s*कवल|को\s*कवन)", "कोक ओवन"),
     (r"(लफटें|लपतें|लपटे)", "लपटें"),
     (r"(धमाखा|तमाका|धमाक|दमाका)", "धमाका"),
     (r"(विषफोट|विसफोट|भिस्फोट)", "विस्फोट"),
@@ -310,25 +312,13 @@ def check_critical_term_clarification(
 
 
 def _load_and_normalize_audio(audio_path: str) -> np.ndarray | str:
-    """Decodes audio to 16kHz float32 array and applies dynamic range gain normalization
-    with noise gate to suppress low-level ambient plant noise."""
+    """Decodes audio to 16kHz float32 array and applies clean dynamic range gain normalization."""
     try:
         audio = fwa.decode_audio(audio_path)
-
-        # Noise gate: suppress ambient plant noise below threshold
-        noise_floor = float(np.percentile(np.abs(audio), 10)) if len(audio) > 1000 else 0.0
-        gate_threshold = max(noise_floor * 3.0, 0.003)
-        mask = np.abs(audio) > gate_threshold
-        # Apply soft gate (attenuate rather than silence) to preserve speech transitions
-        attenuation = np.where(mask, 1.0, 0.1)
-        audio = audio * attenuation
-
-        # Dynamic range normalization
         peak = float(np.max(np.abs(audio))) if len(audio) > 0 else 0.0
-        if peak > 0.005:
-            scale = 0.90 / max(peak, 0.08)
-            audio = np.clip(audio * scale, -1.0, 1.0)
-        return audio.astype(np.float32)
+        if peak > 0.01:
+            audio = (audio / peak * 0.95).astype(np.float32)
+        return audio
     except Exception as exc:
         logger.warning(f"Audio decoding error for {audio_path}: {exc}")
         return audio_path
@@ -342,7 +332,7 @@ def transcribe(audio_path: str, language: str | None = None) -> tuple[str, str, 
         audio_input,
         language=language,
         initial_prompt=initial_prompt,
-        beam_size=2,
+        beam_size=5,
         temperature=0.0,
         condition_on_previous_text=False,
         vad_filter=True,
@@ -381,7 +371,7 @@ def transcribe_and_translate(
         audio_input,
         language=effective_lang_hint,
         initial_prompt=initial_prompt,
-        beam_size=2,
+        beam_size=5,
         temperature=0.0,
         condition_on_previous_text=False,
         vad_filter=True,
@@ -504,10 +494,8 @@ def transcribe_and_translate(
             has_safety = any(w in native_text for w in safety_words)
             is_hallucinated = any(w in english_text.lower() for w in ["criminal", "accused", "loot", "garden", "buy, it's", "twirl", "fight"])
 
-            if is_hallucinated or not english_text:
+            if is_hallucinated or not english_text.strip():
                 english_text = marian_en or english_text
-            elif has_safety and marian_en and marian_en.strip() != native_text.strip():
-                english_text = f"{english_text}. {marian_en}"
         except Exception as exc:
             logger.warning(f"Marian translation augmentation error: {exc}")
 

@@ -77,10 +77,12 @@ CATEGORY_KEYWORDS: dict[str, list[str]] = {
     "vehicle_traffic_incident": [
         "vehicle collision", "truck collision", "wagon derailment", "locomotive collision",
         "forklift collision", "hit by", "run over", "rail track accident", "road crash",
-        "heavy dumper accident", "brake failure collision", "traffic accident",
+        "heavy dumper accident", "brake failure collision", "traffic accident", "accident",
+        "truck accident", "car accident", "vehicle accident", "hit two people", "struck by vehicle",
         "टक्कर", "गाड़ी टकराई", "ट्रक टक्कर", "डंपर टक्कर", "वैगन पटरी से उतरी", "लोकोमोटिव टक्कर",
-        "फोर्कलिफ्ट टक्कर", "धक्का लगा", "कुचल गया", "रेल ट्रैक दुर्घटना",
-        "takkar", "gaadi takrai", "dumper takkar", "loco takkar", "accident ho gaya",
+        "फोर्कलिफ्ट टक्कर", "धक्का लगा", "कुचल गया", "रेल ट्रैक दुर्घटना", "एक्सीडेंट", "दुर्घटना",
+        "ट्रक के आगे", "गाड़ी से टक्कर", "एक्सीडेंट हो गया", "सड़क दुर्घटना",
+        "takkar", "gaadi takrai", "dumper takkar", "loco takkar", "accident ho gaya", "accident",
     ],
     "chemical_spill": [
         "chemical", "acid", "corrosive", "solvent", "spilled", "hydrochloric acid", "hcl",

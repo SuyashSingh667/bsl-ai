@@ -332,12 +332,12 @@ def to_english(text: str, source_lang: str) -> str:
     res = re.sub(r"\bblow\s+of\s+power\b", "electric shock", res, flags=re.IGNORECASE)
     res = re.sub(r"\bblow\s+of\s+electricity\b", "electric shock", res, flags=re.IGNORECASE)
     res = re.sub(r"\blife\s+wire\b", "live wire", res, flags=re.IGNORECASE)
-    if "बिजली" in text or "झटका" in text or "करंट" in text:
+    if re.search(r"(?<![\u0900-\u097f])(बिजली|झटका|करंट)(?![\u0900-\u097f])", text):
         if "shock" not in res.lower() and "electric" not in res.lower():
             res = f"{res} (electric shock hazard)"
-    if "क्रेन" in text and "crane" not in res.lower():
+    if re.search(r"(?<![\u0900-\u097f])(क्रेन)(?![\u0900-\u097f])", text) and "crane" not in res.lower():
         res = f"{res} (overhead crane)"
-    if "आग" in text and "fire" not in res.lower():
+    if re.search(r"(?<![\u0900-\u097f])(आग|लपटें|धुआं)(?![\u0900-\u097f])", text) and "fire" not in res.lower() and "smoke" not in res.lower():
         res = f"{res} (fire hazard)"
     return res
 
