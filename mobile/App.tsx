@@ -93,7 +93,7 @@ export default function App() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="light-content" backgroundColor="#000000" />
+      <StatusBar barStyle="light-content" />
       <View style={styles.container}>
         {step === 'kiosk_login' && (
           <KioskLoginScreen
