@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.responses import RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
@@ -135,6 +136,11 @@ app.include_router(analytics.router)
 
 app.mount("/audio", StaticFiles(directory=str(AUDIO_UPLOAD_DIR)), name="audio")
 app.mount("/photos", StaticFiles(directory=str(PHOTO_UPLOAD_DIR)), name="photos")
+
+
+@app.get("/")
+def root():
+    return RedirectResponse(url="/docs")
 
 
 @app.get("/health")
